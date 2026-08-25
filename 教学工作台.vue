@@ -215,8 +215,48 @@ const aiAdvice = computed(function () {
   return "本周班级平均得分 " + c.value.avg + "，待复核 " + pending.value.length + " 份。薄弱点集中在「" + weakDims.value[0].k + "」「" + weakDims.value[1].k + "」，建议在下次课用真实业务案例串讲" + weakDims.value[0].k + "方法；同时优先辅导 " + teacher.value.needsFocus[0].nm + " 等 " + teacher.value.needsFocus.length + " 名需关注学生，可将高频错因「" + topErrors.value[0].k + "」作为讲评重点。";
 });
 
-// ============ 交互 ============
-function go(view) { emit("navigate", view); }
+// ============ 平台页面跳转（无刷新，等同点击平台 Tab/菜单） ============
+const MENU_OF = {
+  "student-home": "学习主页", "student-task": "任务工作台", "student-ethics": "职业伦理情境", "student-feedback": "学习反馈",
+  "teacher-tasks": "任务管理", "teacher-analytics": "学情分析", "teacher-review": "评分复核"
+};
+const URL_OF = {
+  "student-home": "https://1040053947.yxd.ep.caih.com/apps/desktop/sapp/app_5ex10jl1o4/sapp_qguqtkatxm/box/form/form_udp0sjx0td/4328371521401607?menuId=4328371521401607&resource_type=FORM",
+  "student-task": "https://1040053947.yxd.ep.caih.com/apps/desktop/sapp/app_5ex10jl1o4/sapp_qguqtkatxm/box/form/form_ix7gbehpyi/0859277446244543?menuId=0859277446244543&resource_type=FORM"
+};
+function clickMenu(menuName) {
+  const boxes = document.querySelectorAll('.inner-tabbar-list .tab-box, .tab-box');
+  for (let i = 0; i < boxes.length; i++) { if ((boxes[i].textContent || "").indexOf(menuName) >= 0) { boxes[i].click(); return true; } }
+  const items = document.querySelectorAll('.menu-box [class*="menu-item"], [class*="menu-item"]');
+  for (let i = 0; i < items.length; i++) { if ((items[i].textContent || "").indexOf(menuName) >= 0) { items[i].click(); return true; } }
+  return false;
+}
+function go(view) {
+  const menuName = MENU_OF[view];
+  if (menuName && clickMenu(menuName)) return;
+  const url = URL_OF[view];
+  if (url) {
+    try {
+      const app = document.querySelector("#app");
+      const vueApp = app && app.__vue_app__;
+      const router = vueApp && vueApp.config && vueApp.config.globalProperties && vueApp.config.globalProperties.$router;
+      if (router && typeof router.push === "function") {
+        const tgt = new URL(url, location.origin);
+        let path = tgt.pathname;
+        try {
+          const base = router.options && router.options.history && router.options.history.base;
+          if (base && base !== "/" && path.indexOf(base) === 0) { path = path.slice(base.length); if (path.charAt(0) !== "/") path = "/" + path; }
+        } catch (e2) { /* 读不到 base 则原样传入 */ }
+        router.push(path + tgt.search);
+        return;
+      }
+    } catch (e) { /* 忽略，继续下一级 */ }
+    try { if (window.navigation && typeof window.navigation.navigate === "function") { window.navigation.navigate(url); return; } } catch (e) { /* 忽略 */ }
+    window.location.href = url;
+    return;
+  }
+  emit("navigate", view);
+}
 function focusClass(f) { if (f.score == null) return ""; return f.score < 70 ? "low" : "mid"; }
 function feedCls(k) { return { upload: "d-green", check: "d-blue", bot: "d-blue", warn: "d-orange" }[k] || "d-blue"; }
 function askAI() { showTip("AI 功能待接入：请在 AI_KEY 填入智能体 API Key"); }

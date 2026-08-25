@@ -258,7 +258,15 @@ const PRESET_TEACHER = {
 
 function loadTeacher() {
   let t = lsGet(LS_TEACHER);
-  if (!t) { t = JSON.parse(JSON.stringify(PRESET_TEACHER)); lsSet(LS_TEACHER, t); }
+  if (!t) {
+    t = JSON.parse(JSON.stringify(PRESET_TEACHER));
+    lsSet(LS_TEACHER, t);
+  } else {
+    // 合并 PRESET 兜底：旧版 localStorage 数据可能缺少新增字段（如 cause），补齐避免渲染报错
+    t = Object.assign({}, JSON.parse(JSON.stringify(PRESET_TEACHER)), t);
+    t.cause = Object.assign({}, PRESET_TEACHER.cause, t.cause || {});
+    lsSet(LS_TEACHER, t);
+  }
   return t;
 }
 

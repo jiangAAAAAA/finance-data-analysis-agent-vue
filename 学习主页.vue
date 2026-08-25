@@ -209,8 +209,71 @@ const overallGrade = computed(function () {
   return "D等";
 });
 
+// ============ 页面跳转（低代码平台多 Tab 菜单，无刷新切换） ============
+const VIEW_URL = {
+  "student-task": "https://1040053947.yxd.ep.caih.com/apps/desktop/sapp/app_5ex10jl1o4/sapp_qguqtkatxm/box/form/form_ix7gbehpyi/0859277446244543?menuId=0859277446244543&resource_type=FORM"
+};
+
 // ============ 交互 ============
-function go(view) { emit("navigate", view); }
+function go(view) {
+  const url = VIEW_URL[view];
+  if (!url) { emit("navigate", view); return; }
+
+  // ① 优先：模拟点击平台顶部 Tab / 侧边菜单项（无刷新）
+  const tabName = { "student-task": "任务工作台" }[view];
+  if (tabName) {
+    // 顶部内部 Tab 栏（inner-tabbar 下的 .tab-box）
+    const boxes = document.querySelectorAll('.inner-tabbar-list .tab-box, .tab-box');
+    for (let i = 0; i < boxes.length; i++) {
+      const t = boxes[i].textContent || "";
+      if (t.indexOf(tabName) >= 0) {
+        boxes[i].click();
+        return;
+      }
+    }
+    // 侧边菜单项
+    const items = document.querySelectorAll('.menu-box [class*="menu-item"], [class*="menu-item"]');
+    for (let i = 0; i < items.length; i++) {
+      const t = items[i].textContent || "";
+      if (t.indexOf(tabName) >= 0) {
+        items[i].click();
+        return;
+      }
+    }
+  }
+
+  // ② 其次：平台 Vue Router（无刷新，仅改地址）
+  try {
+    const app = document.querySelector("#app");
+    const vueApp = app && app.__vue_app__;
+    const router = vueApp && vueApp.config && vueApp.config.globalProperties && vueApp.config.globalProperties.$router;
+    if (router && typeof router.push === "function") {
+      const tgt = new URL(url, location.origin);
+      let path = tgt.pathname;
+      // 去掉 router 自身的 base 前缀，避免 push 时重复拼接（如 /apps/desktop 重复）
+      try {
+        const base = router.options && router.options.history && router.options.history.base;
+        if (base && base !== "/" && path.indexOf(base) === 0) {
+          path = path.slice(base.length);
+          if (path.charAt(0) !== "/") path = "/" + path;
+        }
+      } catch (e2) { /* 读不到 base 则原样传入 */ }
+      router.push(path + tgt.search);
+      return;
+    }
+  } catch (e) { /* 忽略，继续下一级 */ }
+
+  // ③ 再次：浏览器 Navigation API（无刷新 SPA 导航）
+  try {
+    if (window.navigation && typeof window.navigation.navigate === "function") {
+      window.navigation.navigate(url);
+      return;
+    }
+  } catch (e) { /* 忽略，继续下一级 */ }
+
+  // ④ 兜底：整页跳转
+  window.location.href = url;
+}
 function openTask(t) {
   if (!t || t.status === "locked") { showTip("该任务尚未解锁，请先完成前置任务"); return; }
   student.value.currentTask = t;

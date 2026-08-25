@@ -58,8 +58,38 @@
             <div class="chat-guide">
               <div class="cg" v-for="(g, i) in cur.guide" :key="i">{{ i + 1 }}. {{ g }}</div>
             </div>
-            <button class="btn btn-primary mt8" @click="aiDiscuss">与立德 Agent 讨论</button>
-            <p class="hint mt8">立德 Agent · 问题引导 / 案例辨析 / 伦理冲突讨论（待接入）</p>
+            <button class="btn btn-primary mt8" @click="aiDiscuss" :disabled="chatLoading">开始与立德 Agent 讨论</button>
+
+            <!-- 对话记录 -->
+            <div class="chat-sec mt8">对话</div>
+            <div class="chat-list" v-if="chatMsgs.length">
+              <div
+                v-for="(m, i) in chatMsgs"
+                :key="i"
+                class="chat-msg"
+                :class="m.role"
+              >
+                <div class="cm-label">{{ m.role === 'user' ? '我' : '立德 Agent' }}</div>
+                <div class="cm-text">
+                  <template v-if="m.role === 'assistant' && chatLoading && i === chatMsgs.length - 1 && !m.text">思考中…</template>
+                  <template v-else>{{ m.text }}</template>
+                </div>
+              </div>
+            </div>
+            <p v-else class="hint mt8">输入你的思考 / 回答，与立德 Agent 展开伦理冲突讨论；回答将作为 query 发送，Agent 会记住本次会话上下文。</p>
+
+            <!-- 输入框 -->
+            <div class="chat-input-row">
+              <input
+                v-model="chatInput"
+                class="chat-input"
+                type="text"
+                placeholder="输入你的回答后回车…"
+                :disabled="chatLoading"
+                @keyup.enter="sendMessage"
+              />
+              <button class="btn btn-primary btn-sm" :disabled="chatLoading || !chatInput.trim()" @click="sendMessage">{{ chatLoading ? '思考中' : '发送' }}</button>
+            </div>
           </template>
           <div v-else class="empty">← 请选择一个职业伦理情境，开始与立德 Agent 讨论</div>
         </div>
@@ -82,9 +112,9 @@ import { ref, computed, onMounted } from "vue";
 
 const emit = defineEmits(["navigate"]);
 
-// ============ AI 占位配置 ============
+// ============ AI 配置（立德 Agent · Dify 风格对话接口） ============
 const AI_URL = "https://agent.gjt-smart.com/v1/chat-messages";
-const AI_KEY = "app-xxxxxx"; // TODO 占位
+const AI_KEY = "app-xplYEWYKIQmzCnudOlDlGHnD";
 
 // ============ 数据服务（localStorage 共享，PRESET 兜底） ============
 function lsGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
@@ -194,8 +224,87 @@ const topics = computed(function () {
 
 // ============ 交互 ============
 function go(view) { emit("navigate", view); }
-function selectScene(s) { cur.value = s; }
-function aiDiscuss() { showTip("AI 功能待接入：请在 AI_KEY 填入智能体 API Key"); }
+
+// ============ 立德 Agent 多轮对话 ============
+const chatMsgs = ref([]);      // 聊天记录 [{ role: 'user'|'assistant', text }]
+const chatInput = ref("");     // 输入框内容（学生回答 → query）
+const chatLoading = ref(false);
+const conversationId = ref(""); // 会话记忆：首次为空，响应后回填，后续轮次回传
+
+function selectScene(s) {
+  // 切换情境：task_context 变更，重置对话与会话记忆，避免上下文串扰
+  if (cur.value !== s) {
+    cur.value = s;
+    conversationId.value = "";
+    chatMsgs.value = [];
+  }
+}
+
+function aiDiscuss() {
+  // 发起讨论：自动发送当前情境的第一条引导问题，作为首轮 query
+  if (!cur.value) { showTip("请先选择一个职业伦理情境"); return; }
+  chatInput.value = cur.value.guide[0] || "请引导我围绕当前情境进行伦理思考。";
+  sendMessage();
+}
+
+async function sendMessage() {
+  const q = chatInput.value.trim();
+  if (!q || chatLoading.value || !cur.value) return;
+  chatMsgs.value.push({ role: "user", text: q });
+  chatInput.value = "";
+  chatLoading.value = true;
+  const c = cur.value;
+  try {
+    const resp = await fetch(AI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + AI_KEY },
+      body: JSON.stringify({
+        inputs: {
+          course_name: "财务大数据分析",
+          knowledge_point: c.kp,
+          task_context: c.scene
+        },
+        response_mode: "streaming",
+        conversation_id: conversationId.value,
+        query: q,
+        user: "apifox",
+        files: []
+      })
+    });
+    if (!resp.ok || !resp.body) { throw new Error("HTTP " + resp.status); }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buf = "";
+    let asst = { role: "assistant", text: "" };
+    chatMsgs.value.push(asst);
+    // 读取 SSE 流：逐行解析 data: JSON 事件
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).replace(/\r$/, "");
+        buf = buf.slice(nl + 1);
+        if (!line || line.indexOf("data:") !== 0) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        let ev;
+        try { ev = JSON.parse(payload); } catch (e) { continue; }
+        // answer 为增量片段，逐段累积
+        if (ev.event === "message" && ev.answer) { asst.text += ev.answer; }
+        // 会话结束 / 工作流结束事件携带 conversation_id，保存用于后续多轮
+        if (ev.conversation_id && (ev.event === "message_end" || ev.event === "workflow_finished")) {
+          conversationId.value = ev.conversation_id;
+        }
+      }
+    }
+  } catch (err) {
+    chatMsgs.value.push({ role: "assistant", text: "请求失败：" + (err && err.message ? err.message : err) + "，请稍后重试。" });
+  } finally {
+    chatLoading.value = false;
+  }
+}
 
 onMounted(function () { });
 </script>
@@ -251,7 +360,7 @@ onMounted(function () { });
 .ethic-case { font-size: 12px; color: #5A6577; background: #EAF2FC; border-radius: 6px; padding: 9px 11px; margin-top: 10px; line-height: 1.6; }
 .discuss-btn { margin-top: 12px; }
 
-/* ============ 讨论面板（占位） ============ */
+/* ============ 讨论面板 ============ */
 .ethic-chat { position: sticky; top: 16px; }
 .chat-panel { background: #fff; border: 1px solid #E3E9F2; border-radius: 8px; padding: 16px; box-shadow: 0 1px 2px rgba(16, 38, 76, .04), 0 2px 8px rgba(16, 38, 76, .05); }
 .chat-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #EEF2F8; }
@@ -260,6 +369,21 @@ onMounted(function () { });
 .chat-sec { font-size: 13px; font-weight: 600; margin: 12px 0 6px; color: #1F2733; }
 .chat-guide { display: flex; flex-direction: column; gap: 7px; }
 .cg { font-size: 12px; color: #5A6577; line-height: 1.6; }
+
+/* 对话记录 */
+.chat-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.chat-msg { display: flex; flex-direction: column; gap: 3px; }
+.chat-msg.user { align-items: flex-end; }
+.chat-msg.assistant { align-items: flex-start; }
+.cm-label { font-size: 11px; color: #97A1B2; padding: 0 2px; }
+.cm-text { font-size: 13px; line-height: 1.6; color: #1F2733; background: #F7FAFD; border: 1px solid #EEF2F8; border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; max-width: 100%; }
+.chat-msg.user .cm-text { background: #EAF2FC; border-color: #DCEBFB; color: #1D4FA8; }
+
+/* 输入框 */
+.chat-input-row { display: flex; gap: 8px; margin-top: 10px; }
+.chat-input { flex: 1; height: 32px; padding: 0 10px; border: 1px solid #D6DEE9; border-radius: 6px; font-size: 13px; color: #1F2733; outline: none; box-sizing: border-box; }
+.chat-input:focus { border-color: #2B6CD6; }
+.chat-input:disabled { background: #F7FAFD; cursor: not-allowed; }
 
 /* ============ 如何运作 ============ */
 .how-it-works { font-size: 13px; line-height: 1.8; color: #5A6577; }
