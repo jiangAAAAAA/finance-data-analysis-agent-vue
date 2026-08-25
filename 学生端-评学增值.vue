@@ -102,7 +102,7 @@ function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch
 const LS_STU = "fd_student_v1";
 
 const PRESET_STUDENT = {
-  name: "林晓", cls: "财管2201", level: 3, lvName: "数据分析员", xp: 640, xpMax: 1000,
+  name: "林晓", cls: "财务2433", level: 3, lvName: "数据分析员", xp: 640, xpMax: 1000,
   tasks: [
     { id: "T01", name: "财报数据治理：多系统对账与清洗", level: "初级", module: "M1", ability: "数据治理", status: "done", score: 92 },
     { id: "T02", name: "三大报表结构解读与勾稽关系", level: "初级", module: "M1", ability: "报表理解", status: "done", score: 88 },
@@ -128,9 +128,9 @@ const PRESET_STUDENT = {
     { n: "财务洞察官", d: "完成综合经营挑战", earned: false }
   ],
   leaderboard: [
-    { nm: "王浩", xp: 880, cls: "财管2201" }, { nm: "林晓", xp: 640, cls: "财管2201" },
-    { nm: "陈雨", xp: 610, cls: "财管2201" }, { nm: "李娜", xp: 555, cls: "财管2202" },
-    { nm: "赵磊", xp: 498, cls: "财管2201" }, { nm: "周婷", xp: 460, cls: "财管2202" }
+    { nm: "王浩", xp: 880, cls: "财务2433" }, { nm: "林晓", xp: 640, cls: "财务2433" },
+    { nm: "陈雨", xp: 610, cls: "财务2433" }, { nm: "李娜", xp: 555, cls: "财务2433" },
+    { nm: "赵磊", xp: 498, cls: "财务2433" }, { nm: "周婷", xp: 460, cls: "财务2433" }
   ],
   streak: 5, accuracy: 89, lastActive: "今天 09:24",
   recommend: {
@@ -180,8 +180,20 @@ const PRESET_STUDENT = {
 };
 
 function loadStudent() {
-  let s = lsGet(LS_STU);
-  if (!s) { s = JSON.parse(JSON.stringify(PRESET_STUDENT)); lsSet(LS_STU, s); }
+  const base = JSON.parse(JSON.stringify(PRESET_STUDENT));
+  const raw = lsGet(LS_STU) || {};
+  const s = Object.assign({}, base, raw);
+  // 班级已统一为财务2433：学生身份与排行榜成员一并归一
+  s.cls = base.cls;
+  if (!Array.isArray(s.leaderboard) || !s.leaderboard.length) s.leaderboard = base.leaderboard;
+  s.leaderboard = s.leaderboard.map(function (p, i) {
+    return Object.assign({}, base.leaderboard[i] || { cls: base.cls }, p, { cls: base.cls });
+  });
+  if (!s.tasks) s.tasks = base.tasks;
+  if (!s.badges) s.badges = base.badges;
+  if (!s.ethicsScenes) s.ethicsScenes = base.ethicsScenes;
+  if (!s.feed) s.feed = base.feed;
+  lsSet(LS_STU, s);
   return s;
 }
 

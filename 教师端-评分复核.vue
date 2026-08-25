@@ -100,7 +100,7 @@ function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch
 const LS_TEACHER = "fd_teacher_v1";
 
 const PRESET_TEACHER = {
-  cls: "财管2201",
+  cls: "财务2433",
   tasks: [
     { id: "T03", name: "毛利率异常分析与费用率排查", level: "初级", diff: "易", ability: "指标分析", status: "已发布", subs: 28, skills: ["毛利率分析", "费用率分析"], ideos: ["行业伦理"] },
     { id: "T04", name: "多维度经营解析（产品/地区/渠道）", level: "中级", diff: "中", ability: "多维分析", status: "已发布", subs: 21, skills: ["常规经营解析"], ideos: ["课程思政教学案例"] },
@@ -176,8 +176,18 @@ const PRESET_TEACHER = {
 };
 
 function loadTeacher() {
-  let t = lsGet(LS_TEACHER);
-  if (!t) { t = JSON.parse(JSON.stringify(PRESET_TEACHER)); lsSet(LS_TEACHER, t); }
+  const base = JSON.parse(JSON.stringify(PRESET_TEACHER));
+  const raw = lsGet(LS_TEACHER) || {};
+  const t = Object.assign({}, base, raw);
+  // 班级已统一为财务2433
+  t.cls = base.cls;
+  if (base.cause) t.cause = Object.assign({}, base.cause, t.cause || {});
+  if (base.radar) t.radar = Object.assign({}, base.radar, t.radar || {});
+  if (!t.tasks && base.tasks) t.tasks = base.tasks;
+  if (!t.submissions && base.submissions) t.submissions = base.submissions;
+  if (!t.errorDist && base.errorDist) t.errorDist = base.errorDist;
+  if (!Array.isArray(t.activity) && base.activity) t.activity = base.activity;
+  lsSet(LS_TEACHER, t);
   return t;
 }
 

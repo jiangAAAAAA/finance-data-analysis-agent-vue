@@ -147,7 +147,7 @@ const AI_KEY = "app-xxxxxx"; // TODO 占位
 
 const PRESET_TEACHER = {
   name: "陈老师",
-  cls: "财管2201",
+  cls: "财务2433",
   classStats: { completion: 82, avg: 79, active: 31, total: 38 },
   weeklySubs: 16,
   completionBars: [
@@ -187,8 +187,18 @@ const PRESET_TEACHER = {
 };
 
 function loadTeacher() {
-  let t = lsGet(LS_TEACHER);
-  if (!t) { t = JSON.parse(JSON.stringify(PRESET_TEACHER)); lsSet(LS_TEACHER, t); }
+  const base = JSON.parse(JSON.stringify(PRESET_TEACHER));
+  const raw = lsGet(LS_TEACHER) || {};
+  const t = Object.assign({}, base, raw);
+  // 班级已统一为财务2433
+  t.cls = base.cls;
+  if (base.cause) t.cause = Object.assign({}, base.cause, t.cause || {});
+  if (base.radar) t.radar = Object.assign({}, base.radar, t.radar || {});
+  if (!t.tasks && base.tasks) t.tasks = base.tasks;
+  if (!t.submissions && base.submissions) t.submissions = base.submissions;
+  if (!t.errorDist && base.errorDist) t.errorDist = base.errorDist;
+  if (!Array.isArray(t.activity) && base.activity) t.activity = base.activity;
+  lsSet(LS_TEACHER, t);
   return t;
 }
 
@@ -217,7 +227,7 @@ const aiAdvice = computed(function () {
 
 // ============ 平台页面跳转（无刷新，等同点击平台 Tab/菜单） ============
 const MENU_OF = {
-  "student-home": "学习主页", "student-task": "任务工作台", "student-ethics": "职业伦理情境", "student-feedback": "学习反馈",
+  "student-home": "学习主页", "student-task": "技能训练", "student-ethics": "立德润心", "student-feedback": "学习反馈",
   "teacher-tasks": "任务管理", "teacher-analytics": "学情分析", "teacher-review": "评分复核"
 };
 const URL_OF = {

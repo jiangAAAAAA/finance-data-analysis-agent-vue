@@ -3,7 +3,7 @@
     <!-- 页头 -->
     <div class="page-head">
       <div class="page-head-bar"></div>
-      <span class="page-head-title">任务工作台</span>
+      <span class="page-head-title">技能训练</span>
       <span class="page-head-sub">财数智析 · 炼技 Agent 伴学任务执行</span>
       <button class="btn-ghost" @click="refresh">刷新数据</button>
     </div>
@@ -40,13 +40,38 @@
     </div>
 
     <!-- 工作区 -->
-    <div class="ws">
+    <div class="ws" :class="{ ws3: task.type === 'analysis' }">
+
+      <!-- ===== 环节流程轨道（分析型任务七环节） ===== -->
+      <div class="flow-rail" v-if="task.type === 'analysis'">
+        <div class="rail-title">任务流程 · 七环节 <span class="rail-sub">点击环节跳转</span></div>
+        <div class="rail-steps">
+          <div
+            v-for="(s, i) in STEP_META" :key="s.no"
+            class="rail-step" :class="{ active: curPanel === i, done: curPanel > i }"
+            :style="railStepStyle(i, s)"
+            @click="railGo(i)"
+          >
+            <span class="rail-dot" :style="railDotStyle(i, s)">{{ curPanel > i ? '✓' : s.no }}</span>
+            <div class="rail-name">
+              <div class="rn-title">{{ s.name }}</div>
+              <div class="rn-sub">{{ s.sub }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- ===== 分析型任务：七步面板 ===== -->
       <div class="main-col" v-if="task.type === 'analysis'">
-        <div class="panel" id="panel-data">
-          <h3>① 经营数据（智诚科技 2026 上半年，单位：万元）</h3>
-          <div class="table-wrap">
+        <div class="panel sh-panel" id="panel-data" style="--sc:#2B6CD6; --sc-bg:#EAF2FC;">
+          <div class="step-head">
+            <span class="sh-no">1</span>
+            <div class="sh-info">
+              <div class="sh-title">经营数据 <span class="sh-tag">数据研读</span></div>
+              <div class="sh-desc">研读智诚科技 2026 上半年财报，提取关键指标变动（单位：万元）</div>
+            </div>
+          </div>
+          <div class="table-wrap t-center">
             <table>
               <thead><tr><th>月份</th><th>营业收入</th><th>营业成本</th><th>毛利率</th><th>销售费用</th><th>管理费用</th><th>净利润</th></tr></thead>
               <tbody>
@@ -67,16 +92,28 @@
           </div>
         </div>
 
-        <div class="panel">
-          <h3>② 智能异常标注 <span class="panel-sub">AI 已自动标记 {{ anomalies.length }} 处关键信号</span></h3>
+        <div class="panel sh-panel" id="panel-anomaly" style="--sc:#FA8C16; --sc-bg:#FFF3E8;">
+          <div class="step-head">
+            <span class="sh-no">2</span>
+            <div class="sh-info">
+              <div class="sh-title">智能异常标注 <span class="sh-tag">AI 标记信号</span></div>
+              <div class="sh-desc">AI 已自动标记 {{ anomalies.length }} 处关键信号，逐条核实并入分析</div>
+            </div>
+          </div>
           <div class="anomaly" v-for="(a, i) in anomalies" :key="i" :class="{ warn: a.sev === 'mid' }">
             <div class="ai">!</div>
             <div><div class="at">{{ a.t }}</div><div class="ad">{{ a.d }}</div></div>
           </div>
         </div>
 
-        <div class="panel" id="panel-trend">
-          <h3>③ 趋势分析</h3>
+        <div class="panel sh-panel" id="panel-trend" style="--sc:#13C2C2; --sc-bg:#E6FFFB;">
+          <div class="step-head">
+            <span class="sh-no">3</span>
+            <div class="sh-info">
+              <div class="sh-title">趋势分析 <span class="sh-tag">图表洞察</span></div>
+              <div class="sh-desc">通过折线图与费用率走势，定位利润下滑的驱动因素</div>
+            </div>
+          </div>
           <svg class="svg-chart" viewBox="0 0 520 160" role="img">
             <text :x="28" y="14" font-size="11" fill="#5A6577" font-weight="600">净利润（万元）</text>
             <line v-for="g in gridYs" :key="g" :x1="28" :y1="g" :x2="492" :y2="g" stroke="#EEF2F8" />
@@ -112,7 +149,7 @@
             </ul>
           </div>
           <div class="ethic-inline" v-if="linkedEthics.length">
-            <span class="ethic-note">本任务关联职业伦理情境：</span>
+            <span class="ethic-note">本任务关联立德润心：</span>
             <span class="ethic-trigger" v-for="s in linkedEthics" :key="'e' + s.topic" @click="goEthics">{{ s.topic }}</span>
             <span class="ethic-note">· 点击查看情境与引导思考</span>
           </div>
@@ -130,10 +167,14 @@
           </div>
         </div>
 
-        <div class="panel">
-          <div class="sg-head">
-            <span class="sg-title">④ 分析思路引导</span>
-            <span class="ti-sub">完成度 {{ guidePct }}%</span>
+        <div class="panel sh-panel" id="panel-guide" style="--sc:#722ED1; --sc-bg:#F5EEFF;">
+          <div class="step-head">
+            <span class="sh-no">4</span>
+            <div class="sh-info">
+              <div class="sh-title">分析思路引导 <span class="sh-tag">分析支架</span></div>
+              <div class="sh-desc">按「看趋势 → 找异常 → 拆维度 → 查原因 → 提建议」搭建分析路径</div>
+            </div>
+            <span class="sh-pct">完成度 {{ guidePct }}%</span>
           </div>
           <div
             class="chk-row" :class="{ on: guideChecked.includes(i) }"
@@ -144,8 +185,14 @@
           <div class="bar-bg tall mt8"><div class="bar-fill f-blue" :style="{ width: guidePct + '%' }"></div></div>
         </div>
 
-        <div class="panel">
-          <h3>⑤ 快速测算工具</h3>
+        <div class="panel sh-panel" id="panel-calc" style="--sc:#F7BA1E; --sc-bg:#FFFBE6;">
+          <div class="step-head">
+            <span class="sh-no">5</span>
+            <div class="sh-info">
+              <div class="sh-title">快速测算工具 <span class="sh-tag">指标计算</span></div>
+              <div class="sh-desc">选择月份，实时计算关键财务指标辅助判断</div>
+            </div>
+          </div>
           <div class="calc">
             <div class="calc-field">
               <label>选择月份</label>
@@ -161,8 +208,15 @@
           </div>
         </div>
 
-        <div class="panel" id="panel-conc">
-          <h3>⑥ 结论撰写</h3>
+        <div class="panel sh-panel" id="panel-conc" style="--sc:#52C41A; --sc-bg:#F1FAE8;">
+          <div class="step-head">
+            <span class="sh-no">6</span>
+            <div class="sh-info">
+              <div class="sh-title">结论撰写 <span class="sh-tag">三要素成文</span></div>
+              <div class="sh-desc">按「核心结论 → 数据支撑 → 改进建议」三要素撰写分析结论</div>
+            </div>
+            <span class="sh-pct">完整度 {{ concPct }}%</span>
+          </div>
           <div class="ref-chips">
             参考趋势发现：
             <span class="kp" v-if="!draft.findings.length">（可在 ③ 趋势分析勾选你的发现）</span>
@@ -187,8 +241,14 @@
           </div>
         </div>
 
-        <div class="panel" id="panel-submit">
-          <h3>⑦ 提交评分</h3>
+        <div class="panel sh-panel" id="panel-submit" style="--sc:#FF4D4F; --sc-bg:#FFECEC;">
+          <div class="step-head">
+            <span class="sh-no">7</span>
+            <div class="sh-info">
+              <div class="sh-title">提交评分 <span class="sh-tag">成果提交</span></div>
+              <div class="sh-desc">确认待提交内容后提交，AI 自动评分并生成复盘报告</div>
+            </div>
+          </div>
           <div class="submit-card">
             <div class="sc-row"><span class="muted">待提交内容</span><span>趋势发现 {{ draft.findings.length }} · 结论 {{ concLen }} 字</span></div>
             <div class="sc-preview" :class="{ empty: !draft.core }">
@@ -364,7 +424,7 @@ const AI_URL = "https://agent.gjt-smart.com/v1/chat-messages";
 const AI_KEY = "app-xxxxxx"; // TODO 占位
 
 const PRESET_STUDENT = {
-  name: "林晓", cls: "财管2201", level: 3, lvName: "数据分析员", xp: 640, xpMax: 1000,
+  name: "林晓", cls: "财务2433", level: 3, lvName: "数据分析员", xp: 640, xpMax: 1000,
   tasks: [
     { id: "T01", name: "财报数据治理：多系统对账与清洗", level: "初级", module: "M1", ability: "数据治理", status: "done", score: 92 },
     { id: "T02", name: "三大报表结构解读与勾稽关系", level: "初级", module: "M1", ability: "报表理解", status: "done", score: 88 },
@@ -390,9 +450,9 @@ const PRESET_STUDENT = {
     { n: "财务洞察官", d: "完成综合经营挑战", earned: false }
   ],
   leaderboard: [
-    { nm: "王浩", xp: 880, cls: "财管2201" }, { nm: "林晓", xp: 640, cls: "财管2201" },
-    { nm: "陈雨", xp: 610, cls: "财管2201" }, { nm: "李娜", xp: 555, cls: "财管2202" },
-    { nm: "赵磊", xp: 498, cls: "财管2201" }, { nm: "周婷", xp: 460, cls: "财管2202" }
+    { nm: "王浩", xp: 880, cls: "财务2433" }, { nm: "林晓", xp: 640, cls: "财务2433" },
+    { nm: "陈雨", xp: 610, cls: "财务2433" }, { nm: "李娜", xp: 555, cls: "财务2433" },
+    { nm: "赵磊", xp: 498, cls: "财务2433" }, { nm: "周婷", xp: 460, cls: "财务2433" }
   ],
   streak: 5, accuracy: 89, lastActive: "今天 09:24",
   recommend: {
@@ -442,8 +502,20 @@ const PRESET_STUDENT = {
 };
 
 function loadStudent() {
-  let s = lsGet(LS_STU);
-  if (!s) { s = JSON.parse(JSON.stringify(PRESET_STUDENT)); lsSet(LS_STU, s); }
+  const base = JSON.parse(JSON.stringify(PRESET_STUDENT));
+  const raw = lsGet(LS_STU) || {};
+  const s = Object.assign({}, base, raw);
+  // 班级已统一为财务2433：学生身份与排行榜成员一并归一
+  s.cls = base.cls;
+  if (!Array.isArray(s.leaderboard) || !s.leaderboard.length) s.leaderboard = base.leaderboard;
+  s.leaderboard = s.leaderboard.map(function (p, i) {
+    return Object.assign({}, base.leaderboard[i] || { cls: base.cls }, p, { cls: base.cls });
+  });
+  if (!s.tasks) s.tasks = base.tasks;
+  if (!s.badges) s.badges = base.badges;
+  if (!s.ethicsScenes) s.ethicsScenes = base.ethicsScenes;
+  if (!s.feed) s.feed = base.feed;
+  lsSet(LS_STU, s);
   return s;
 }
 
@@ -532,7 +604,7 @@ const KNOW = {
   '可视化': ['动态仪表盘', 'BI看板搭建', '模型迭代优化']
 };
 
-// ============ 任务 → 职业伦理情境锚定（按课程模块映射） ============
+// ============ 任务 → 立德润心锚定（按课程模块映射） ============
 const ETHICS_LINK = {
   M1: ['数据真实性', '数据隐私', '商业秘密'],
   M2: ['盈余管理'],
@@ -584,6 +656,44 @@ function refresh() {
 // ============ 任务面板状态 ============
 const STEPS = ['数据研读', '趋势分析', '结论撰写', '提交评分'];
 const GOTO = ['panel-data', 'panel-trend', 'panel-conc', 'panel-submit'];
+
+// 分析型任务 · 七环节流程（差异化主题色，用于左侧流程轨道）
+const STEP_META = [
+  { no: 1, name: '经营数据', sub: '数据研读', color: '#2B6CD6', bg: '#EAF2FC' },
+  { no: 2, name: '异常标注', sub: 'AI 标记信号', color: '#FA8C16', bg: '#FFF3E8' },
+  { no: 3, name: '趋势分析', sub: '图表洞察', color: '#13C2C2', bg: '#E6FFFB' },
+  { no: 4, name: '思路引导', sub: '分析支架', color: '#722ED1', bg: '#F5EEFF' },
+  { no: 5, name: '快速测算', sub: '指标计算', color: '#F7BA1E', bg: '#FFFBE6' },
+  { no: 6, name: '结论撰写', sub: '三要素成文', color: '#52C41A', bg: '#F1FAE8' },
+  { no: 7, name: '提交评分', sub: '成果提交', color: '#FF4D4F', bg: '#FFECEC' }
+];
+const RAIL_TARGETS = ['panel-data', 'panel-anomaly', 'panel-trend', 'panel-guide', 'panel-calc', 'panel-conc', 'panel-submit'];
+const curPanel = ref(0);
+function railStepStyle(i, s) {
+  if (curPanel.value === i) return { borderLeftColor: s.color, background: s.bg };
+  return {};
+}
+function railDotStyle(i, s) {
+  if (curPanel.value === i) return { background: s.color, borderColor: s.color };
+  if (curPanel.value > i) return { background: '#52C41A', borderColor: '#52C41A' };
+  return {};
+}
+function railGo(i) {
+  curPanel.value = i;
+  const el = document.getElementById(RAIL_TARGETS[i]);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+// 滚动时同步高亮当前所在环节
+function syncPanel() {
+  let best = curPanel.value, bestDist = 1e9;
+  for (let i = 0; i < RAIL_TARGETS.length; i++) {
+    const el = document.getElementById(RAIL_TARGETS[i]);
+    if (!el) continue;
+    const d = Math.abs(el.getBoundingClientRect().top - 24);
+    if (d < bestDist) { bestDist = d; best = i; }
+  }
+  curPanel.value = best;
+}
 const ASTEPS = [
   '看趋势：对比 6 个月指标变化，找出波动最大项',
   '找异常：定位偏离正常阈值的指标',
@@ -691,7 +801,7 @@ const gridYs = computed(function () { return [0, 0.5, 1].map(function (g) { retu
 
 // ============ 平台页面跳转（无刷新，等同点击平台 Tab/菜单） ============
 const MENU_OF = {
-  "student-home": "学习主页", "student-task": "任务工作台", "student-ethics": "职业伦理情境", "student-feedback": "学习反馈",
+  "student-home": "学习主页", "student-task": "技能训练", "student-ethics": "立德润心", "student-feedback": "学习反馈",
   "teacher-tasks": "任务管理", "teacher-analytics": "学情分析", "teacher-review": "评分复核"
 };
 const URL_OF = {
@@ -880,12 +990,14 @@ function resetMentor() { chatMsgs.value = [{ role: 'ai', text: mentorWelcome }];
 // ---------- 样式辅助 ----------
 function lvTag(lv) { return lv === "初级" ? "tag-blue" : lv === "中级" ? "tag-orange" : "tag-red"; }
 
-onMounted(function () { });
+onMounted(function () {
+  window.addEventListener('scroll', syncPanel, { passive: true });
+});
 </script>
 
 <style scoped>
 /* ============ 基线（对齐学习主页 / Ant 风格） ============ */
-.pg { max-width: 1100px; margin: 0 auto; padding: 18px 16px 40px; }
+.pg { max-width: 1200px; margin: 0 auto; padding: 18px 16px 40px; }
 .page-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .page-head-bar { width: 4px; height: 22px; border-radius: 2px; background: #1677FF; }
 .page-head-title { font-size: 20px; font-weight: 600; color: #1F2733; }
@@ -930,7 +1042,22 @@ onMounted(function () { });
 .f-red { background: #FF4D4F; }
 .tip { margin-top: 12px; background: #EAF2FC; border: 1px solid #DCEBFB; color: #1D4FA8; font-size: 13px; border-radius: 6px; padding: 8px 12px; }
 .empty { padding: 40px; text-align: center; color: #97A1B2; font-size: 13px; }
-@media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } .kpi-row, .kpi-row.tri { grid-template-columns: repeat(2, 1fr); } .ws { grid-template-columns: 1fr; } .ai-col { position: static; } .calc-cols { grid-template-columns: 1fr; } }
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .kpi-row, .kpi-row.tri { grid-template-columns: repeat(2, 1fr); }
+  .ws, .ws3 { grid-template-columns: 1fr; }
+  .ai-col { position: static; }
+  .calc-cols { grid-template-columns: 1fr; }
+  /* 流程轨道收拢为顶部横向滑块 */
+  .flow-rail { position: static; padding: 10px 12px; }
+  .rail-title { border-bottom: none; padding-bottom: 4px; }
+  .rail-steps { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .rail-step {
+    flex: 0 0 auto; flex-direction: column; align-items: center; gap: 5px; text-align: center;
+    border-left: none; padding: 7px 12px; min-width: 86px;
+  }
+  .rail-name .rn-sub { margin-top: 2px; }
+}
 
 /* ============ 任务头部 ============ */
 .task-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
@@ -969,7 +1096,8 @@ onMounted(function () { });
 .step.done { color: #5A6577; }
 
 /* ============ 工作区双栏 ============ */
-.ws { display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
+.ws { display: grid; grid-template-columns: 1fr 370px; gap: 16px; align-items: start; }
+.ws3 { grid-template-columns: 208px 1fr 370px; }
 .main-col { min-width: 0; }
 .ai-col { position: sticky; top: 0; }
 .ai-panel {
@@ -977,6 +1105,33 @@ onMounted(function () { });
   box-shadow: 0 1px 2px rgba(16, 38, 76, .04), 0 2px 8px rgba(16, 38, 76, .05);
   display: flex; flex-direction: column; gap: 10px;
 }
+
+/* ============ 环节流程轨道（分析型任务·七环节） ============ */
+.flow-rail {
+  background: #fff; border: 1px solid #E3E9F2; border-radius: 8px; padding: 14px 12px;
+  box-shadow: 0 1px 2px rgba(16, 38, 76, .04), 0 2px 8px rgba(16, 38, 76, .05);
+  position: sticky; top: 8px;
+}
+.rail-title { font-size: 13px; font-weight: 700; color: #1F2733; padding: 2px 8px 12px; border-bottom: 1px dashed #E3E9F2; margin-bottom: 8px; }
+.rail-sub { font-size: 11px; color: #97A1B2; font-weight: 400; margin-left: 4px; }
+.rail-step {
+  display: flex; align-items: flex-start; gap: 9px; padding: 8px;
+  border-radius: 8px; cursor: pointer; transition: all .15s ease;
+  border-left: 3px solid transparent;
+}
+.rail-step:hover { background: #F7FAFD; }
+.rail-step.done { opacity: .5; }
+.rail-step.done:hover { opacity: .8; }
+.rail-dot {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  background: #EEF3FA; border: 1px solid transparent; color: #97A1B2;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.rail-name { min-width: 0; }
+.rn-title { font-size: 13px; font-weight: 600; color: #1F2733; line-height: 1.4; }
+.rn-sub { font-size: 11px; color: #97A1B2; margin-top: 1px; }
+.rail-step.active .rn-sub { color: inherit; }
 
 /* ============ 面板 ============ */
 .panel {
@@ -986,12 +1141,42 @@ onMounted(function () { });
 .panel h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
 .panel-sub { font-size: 12px; font-weight: 400; color: #97A1B2; }
 
+/* 环节面板：顶部主题色条 + 环节头（七色差异化） */
+.sh-panel { border-top: 3px solid var(--sc); }
+.step-head {
+  display: flex; align-items: center; gap: 12px;
+  padding-bottom: 13px; margin-bottom: 14px;
+  border-bottom: 1px dashed #E3E9F2;
+}
+.sh-no {
+  width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+  background: var(--sc); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700;
+  box-shadow: 0 2px 8px rgba(16, 38, 76, .14);
+}
+.sh-info { min-width: 0; }
+.sh-title {
+  font-size: 15px; font-weight: 600; color: #1F2733;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.sh-title .sh-tag {
+  font-size: 11px; font-weight: 600; color: var(--sc);
+  background: var(--sc-bg); border-radius: 99px; padding: 2px 9px;
+}
+.sh-desc { font-size: 12px; color: #5A6577; margin-top: 3px; }
+.sh-pct {
+  margin-left: auto; font-size: 12px; font-weight: 600; color: var(--sc);
+  background: var(--sc-bg); padding: 4px 11px; border-radius: 99px; white-space: nowrap; flex-shrink: 0;
+}
+
 /* 表格 */
 .table-wrap { overflow-x: auto; border: 1px solid #E3E9F2; border-radius: 8px; }
 .table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
 .table-wrap th, .table-wrap td { padding: 9px 12px; border-bottom: 1px solid #EEF2F8; text-align: right; }
 .table-wrap th:first-child, .table-wrap td:first-child { text-align: left; }
 .table-wrap thead th { background: #F7FAFD; color: #1F2733; font-weight: 600; white-space: nowrap; }
+.table-wrap.t-center th, .table-wrap.t-center td { text-align: center; }
 .table-wrap tbody tr:last-child td { border-bottom: none; }
 .table-wrap tbody tr:hover td { background: #F7FAFD; }
 
@@ -1056,8 +1241,6 @@ onMounted(function () { });
 .fchip.on .ck { background: #2B6CD6; border-color: #2B6CD6; }
 
 /* 思路引导 */
-.sg-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 10px; }
-.sg-title { font-size: 15px; font-weight: 600; }
 .chk-row {
   display: flex; align-items: center; gap: 10px; padding: 9px 10px;
   border-radius: 6px; cursor: pointer; transition: background .15s;
