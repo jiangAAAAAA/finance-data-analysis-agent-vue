@@ -371,6 +371,7 @@
               <div class="sh-title">炼技 Agent 评分结果 <span class="sh-tag">Markdown 评语</span></div>
               <div class="sh-desc">提交时间：{{ submittedAt }} · 可重新作答后再次提交，评语将更新</div>
             </div>
+            <span class="sh-pct sh-score" v-if="totalScore !== ''">得分：{{ totalScore }}</span>
           </div>
           <div class="md-body" v-html="mdToHtml(result)"></div>
           <div class="sc-actions">
@@ -689,6 +690,7 @@ const tip = ref("");
 const submitting = ref(false);
 const result = ref("");
 const submittedAt = ref("");
+const totalScore = ref("");
 const showMd = ref(false);
 const curNav = ref(0);
 let tipTimer = null;
@@ -1141,6 +1143,11 @@ async function submitWork() {
       "";
     if (!raw.trim()) throw new Error("炼技 Agent 未返回评语，请稍后重试");
     result.value = raw;
+    // 总分取自 Agent 返回的 data.output.total_score（兼容 outputs 及不同返回层级）
+    const scoreNode = (data && data.data ? data.data : data) || {};
+    const scoreOutputs = scoreNode.output || scoreNode.outputs || {};
+    const scoreVal = scoreOutputs.total_score;
+    totalScore.value = (scoreVal === 0 || scoreVal) ? String(scoreVal) : "";
     submittedAt.value = new Date().toLocaleString("zh-CN", { hour12: false });
     showMd.value = false;
     showTip("提交成功，炼技 Agent 已完成评分");
@@ -1393,6 +1400,7 @@ function scrollMentor() {
 .sh-title .sh-tag { font-size: 11px; font-weight: 600; color: var(--sc); background: var(--sc-bg); border-radius: 99px; padding: 2px 9px; }
 .sh-desc { font-size: 12px; color: #5A6577; margin-top: 3px; }
 .sh-pct { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--sc); background: var(--sc-bg); padding: 4px 11px; border-radius: 99px; white-space: nowrap; flex-shrink: 0; }
+.sh-score { font-size: 14px; padding: 4px 12px; }
 .sh-dl { margin-left: auto; flex-shrink: 0; align-self: center; }
 
 /* 表单 */
