@@ -10,7 +10,6 @@
     <div class="card">
       <div class="section-title">
         <span class="bar"></span>课程思政资源库
-        <span class="lib-meta">{{ ideology.resources.length }} 份资源 · 标签化 · 可检索 · 来源标注</span>
         <button class="btn btn-primary btn-sm" @click="openResource(null)">上传资源</button>
       </div>
       <div class="res-lib">

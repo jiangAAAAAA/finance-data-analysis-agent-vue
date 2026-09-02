@@ -4,7 +4,7 @@
     <div class="page-head">
       <div class="page-head-bar"></div>
       <span class="page-head-title">学情分析</span>
-      <span class="page-head-sub">{{ teacher.cls }} · 共 {{ c.total }} 人 · 基于 AI 评分、错因与能力雷达生成的教学诊断报告</span>
+      <span class="page-head-sub">增值 Agent · 多元评价与班级学情诊断</span>
     </div>
 
     <!-- Tab 切换：班级 / 个人 -->

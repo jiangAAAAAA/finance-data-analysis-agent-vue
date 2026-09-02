@@ -35,21 +35,21 @@
             <span class="agent-ic">
               <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.3-9A5.4 5.4 0 0 1 12 6.6 5.4 5.4 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>
             </span>
-            <span class="agent-txt"><b>立德 · 启智立德</b><small>课程思政情境 · 立德 Agent 伴学</small></span>
+            <span class="agent-txt"><b>立德 · 启智立德</b><small>立德Agent · 专业思政思辨</small></span>
             <span class="agent-go">进入 ›</span>
           </div>
           <div class="agent-chip chip-tech-new" @click="go('student-task')">
             <span class="agent-ic">
               <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg>
             </span>
-            <span class="agent-txt"><b>炼技 · 入岗炼技</b><small>任务训练 · 炼技 Agent 实操评分</small></span>
+            <span class="agent-txt"><b>炼技 · 入岗炼技</b><small>炼技Agent · 智能评分伴学</small></span>
             <span class="agent-go">进入 ›</span>
           </div>
           <div class="agent-chip chip-grow-new" @click="go('student-growth')">
             <span class="agent-ic">
               <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-9"/><path d="M16 6h5v5"/></svg>
             </span>
-            <span class="agent-txt"><b>增值 · 促学成长</b><small>评价反馈 · 增值 Agent 多元评价</small></span>
+            <span class="agent-txt"><b>增值 · 促学成长</b><small>增值Agent · 多元促学评价</small></span>
             <span class="agent-go">进入 ›</span>
           </div>
         </div>

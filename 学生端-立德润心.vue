@@ -4,7 +4,7 @@
     <div class="page-head">
       <div class="page-head-bar"></div>
       <span class="page-head-title">立德润心</span>
-      <span class="page-head-sub">立德 Agent 智能推送 · 课程思政资源库</span>
+      <span class="page-head-sub">立德Agent · 智能推送与引导思辨</span>
     </div>
 
     <!-- 主题覆盖横幅 -->
@@ -76,7 +76,7 @@
                 </div>
               </div>
             </div>
-            <p v-else class="hint mt8">输入你的思考 / 回答，与立德 Agent 展开伦理冲突讨论；回答将作为 query 发送，Agent 会记住本次会话上下文。</p>
+            <p v-else class="hint mt8">输入你的思考 / 回答，与立德 Agent 展开伦理冲突讨论</p>
 
             <!-- 输入框 -->
             <div class="chat-input-row">

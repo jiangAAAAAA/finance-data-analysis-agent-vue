@@ -4,7 +4,7 @@
     <div class="page-head">
       <div class="page-head-bar"></div>
       <span class="page-head-title">评学档案</span>
-      <span class="page-head-sub">增值 Agent · 基于能力图谱与岗位标准的多元评价</span>
+      <span class="page-head-sub">增值 Agent · 能力雷达与多元评价</span>
     </div>
 
     <!-- 能力雷达 + 等级经验/徽章 -->
