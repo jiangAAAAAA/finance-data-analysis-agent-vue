@@ -392,6 +392,29 @@
 
       <!-- ===== 右侧：AI 财务导师（接入另一对话智能体，流式答疑） ===== -->
       <div class="ai-col">
+        <div class="keynode-push">
+          <div class="kn-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3l7 3v5c0 4-3 7-7 9-4-2-7-5-7-9V6z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+            <b>立德 Agent · 任务思政推送</b>
+            <span class="tag tag-orange">关联知识点：{{ TASK_ETHIC_TOPICS_TEXT }}</span>
+          </div>
+          <div class="kn-sub">本任务涉及「{{ TASK_ETHIC_TOPICS_TEXT }}」等思政要素，立德 Agent 已推送关联素材，引导你关注数据诚信、合规意识</div>
+          <div class="kn-mats">
+            <div v-for="(m, i) in TASK_ETHIC_PUSH.materials" :key="i" class="kn-mat">
+              <span class="km-type">{{ m.type }}</span>
+              <div class="kn-mat-body">
+                <div class="km-name">{{ m.name }}</div>
+                <div class="km-src">来源：{{ m.src }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="kn-foot">
+            <button class="btn btn-primary btn-sm" @click="go('student-ethics')">前往立德润心 · 展开思辨</button>
+          </div>
+        </div>
         <div class="ai-panel">
           <div class="mentor-head">
             <span class="mentor-avatar">AI</span>
@@ -447,6 +470,15 @@ const AI_KEY = "app-LQY5t0hJxu3kC6ViiDFBUKHm";
 const AI_BASE = AI_URL.replace(/\/workflows\/run$/, "");
 const UPLOAD_URL = AI_BASE + "/files/upload";
 const AI_USER = "student-training";
+
+// 立德 Agent：技能训练任务思政推送
+const TASK_ETHIC_PUSH = {
+  topics: ["数据真实性", "财务造假"],
+  materials: [
+    { type: "行业案例", name: "数字背后的责任", src: "典型违规案例" }
+  ]
+};
+const TASK_ETHIC_TOPICS_TEXT = TASK_ETHIC_PUSH.topics.join("、");
 
 // AI 财务导师（另一对话智能体 · 伴学答疑）：chat-messages 接口
 const MNT_URL = "https://agent.gjt-smart.com/v1/chat-messages";
@@ -1480,6 +1512,30 @@ function scrollMentor() {
 
 /* ============ AI 财务导师 · 右侧边栏 ============ */
 .ai-col { position: sticky; top: 8px; }
+.keynode-push {
+  background: linear-gradient(135deg, #FFF9F0, #FDF3E3);
+  border: 1px solid #E8D5B5;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.kn-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: #8C5A16; }
+.kn-head svg { width: 15px; height: 15px; color: #C96A06; flex-shrink: 0; }
+.kn-head b { font-size: 13px; font-weight: 700; }
+.kn-sub { margin: 8px 0 10px; font-size: 12px; line-height: 1.6; color: #5A6577; }
+.kn-mats { display: flex; flex-direction: column; gap: 7px; }
+.kn-mat {
+  display: flex; align-items: center; gap: 9px; min-width: 0;
+  background: #fff; border: 1px solid #E3E9F2; border-radius: 6px; padding: 7px 10px;
+}
+.km-type {
+  flex-shrink: 0; font-size: 11px; font-weight: 700; color: #8C5A16;
+  background: #F7E8CF; border-radius: 99px; padding: 2px 9px; white-space: nowrap;
+}
+.kn-mat-body { min-width: 0; }
+.km-name { font-size: 12.5px; font-weight: 600; color: #1F2733; line-height: 1.5; }
+.km-src { margin-top: 2px; font-size: 11px; color: #97A1B2; }
+.kn-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .ai-panel {
   background: #fff; border: 1px solid #E3E9F2; border-radius: 8px; padding: 16px;
   box-shadow: 0 1px 2px rgba(16, 38, 76, .04), 0 2px 8px rgba(16, 38, 76, .05);
