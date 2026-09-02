@@ -50,7 +50,7 @@
 
     <!-- 电子档案袋 -->
     <div class="card mt2">
-      <div class="section-title"><span class="bar"></span>电子档案袋<span class="card-sub">任务过程与结果留痕</span></div>
+      <div class="section-title"><span class="bar"></span>电子学习档案<span class="card-sub">任务过程与结果留痕</span></div>
       <div class="port-wrap">
         <div class="port-item" v-for="x in student.tasks" :key="x.id">
           <span class="port-av">{{ x.id.slice(1) }}</span>
