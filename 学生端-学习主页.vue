@@ -4,7 +4,7 @@
     <div class="page-head">
       <div class="page-head-bar"></div>
       <span class="page-head-title">学习主页</span>
-      <span class="page-head-sub">财数智析 · 沉浸式学习智能体（学生端）</span>
+      <span class="page-head-sub">“立德-炼技-增值”多智能体沉浸式学习平台（学生端）</span>
       <button class="btn-ghost" @click="refresh">刷新数据</button>
     </div>
 
@@ -15,6 +15,7 @@
         <div class="hero-line">
           <span class="hero-hello">你好，{{ student.name }}！</span>
           <span class="tag tag-light">{{ student.cls }}</span>
+          <span class="hero-lv">Lv.{{ student.level }} {{ student.lvName }}</span>
           <span class="hero-flame">连续学习 {{ student.streak }} 天</span>
         </div>
         <div class="xp-wrap">
@@ -28,11 +29,29 @@
 
       <!-- 三智能体协同 -->
       <div class="card agent-card">
-        <div class="section-title"><span class="bar"></span>三智能体协同</div>
+        <div class="section-title"><span class="bar"></span>三智能体协同<span class="card-sub">点击卡片进入对应智能体应用</span></div>
         <div class="agent-row">
-          <div class="agent-chip chip-ideo-new">立德 · 启智立德</div>
-          <div class="agent-chip chip-tech-new">炼技 · 入岗炼技</div>
-          <div class="agent-chip chip-grow-new">增值 · 促学成长</div>
+          <div class="agent-chip chip-ideo-new" @click="go('student-ethics')">
+            <span class="agent-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.6-9.3-9A5.4 5.4 0 0 1 12 6.6 5.4 5.4 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg>
+            </span>
+            <span class="agent-txt"><b>立德 · 启智立德</b><small>课程思政情境 · 立德 Agent 伴学</small></span>
+            <span class="agent-go">进入 ›</span>
+          </div>
+          <div class="agent-chip chip-tech-new" @click="go('student-task')">
+            <span class="agent-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="#fff"/></svg>
+            </span>
+            <span class="agent-txt"><b>炼技 · 入岗炼技</b><small>任务训练 · 炼技 Agent 实操评分</small></span>
+            <span class="agent-go">进入 ›</span>
+          </div>
+          <div class="agent-chip chip-grow-new" @click="go('student-growth')">
+            <span class="agent-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-9"/><path d="M16 6h5v5"/></svg>
+            </span>
+            <span class="agent-txt"><b>增值 · 促学成长</b><small>评价反馈 · 增值 Agent 多元评价</small></span>
+            <span class="agent-go">进入 ›</span>
+          </div>
         </div>
         <p class="agent-desc mt8">三个智能体贯穿「导学筑基 → 实操历练 → 评价反馈」，德技并育人。</p>
       </div>
@@ -108,6 +127,35 @@
       </div>
     </div>
 
+    <!-- 任务地图 -->
+    <div class="card mt2">
+      <div class="section-title"><span class="bar"></span>任务地图<span class="card-sub">四大模块 · 初/中/高三级关卡 · 点击关卡进入 2D 学习工作台</span></div>
+      <div class="task-grid">
+        <div
+          v-for="t in student.tasks" :key="t.id"
+          class="task-card" :class="{ locked: t.status === 'locked' }"
+          @click="openTask(t)"
+        >
+          <span class="tm-lv tag" :class="lvTag(t.level)">{{ t.level }}</span>
+          <h4>{{ t.name }}</h4>
+          <div class="tm-meta">
+            <span class="tag tag-gray">{{ t.module }}</span>
+            <span class="tag tag-blue">{{ t.ability }}</span>
+          </div>
+          <div class="tm-foot">
+            <span v-if="t.status === 'done'" class="tm-score">{{ t.score }} 分</span>
+            <span v-else-if="t.status === 'active'" class="tag tag-green">进行中</span>
+            <span v-else class="tag tag-gray">待解锁</span>
+            <span v-if="t.status !== 'locked'" class="tm-go">进入 ›</span>
+          </div>
+          <div v-if="t.status === 'locked'" class="tm-lk">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            完成前置任务解锁
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 提示 -->
     <div v-if="tip" class="tip">{{ tip }}</div>
   </div>
@@ -121,33 +169,34 @@ const emit = defineEmits(["navigate"]);
 // ============ 数据服务（localStorage 共享，PRESET 兜底） ============
 function lsGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 忽略 */ } }
-const LS_STU = "fd_student_v1";
+const LS_STU = "fd_student_v2";
 
 const PRESET_STUDENT = {
-  name: "林晓", cls: "财务2433", level: 3, lvName: "数据分析员", xp: 640, xpMax: 1000,
+  name: "林晓", cls: "财务2433", level: 3, lvName: "财务分析师", xp: 640, xpMax: 1000,
   tasks: [
-    { id: "T01", name: "财报数据治理：多系统对账与清洗", level: "初级", module: "M1", ability: "数据治理", status: "done", score: 92 },
-    { id: "T02", name: "三大报表结构解读与勾稽关系", level: "初级", module: "M1", ability: "报表理解", status: "done", score: 88 },
-    { id: "T03", name: "毛利率异常分析与费用率排查", level: "初级", module: "M2", ability: "指标分析", type: "analysis", status: "active", score: null },
-    { id: "T04", name: "多维度经营解析（产品/地区/渠道）", level: "中级", module: "M2", ability: "多维分析", type: "analysis", status: "locked" },
-    { id: "T05", name: "异常特征识别与帕累托分析", level: "中级", module: "M3", ability: "营运能力", type: "analysis", status: "locked" },
-    { id: "T06", name: "成本结构量价拆分模型", level: "中级", module: "M3", ability: "成本控制", type: "analysis", status: "locked" },
-    { id: "T07", name: "现金流分析与利润质量评价", level: "中级", module: "M4", ability: "现金流分析", type: "analysis", status: "locked" },
-    { id: "T08", name: "偿债能力分层与风险预警诊断", level: "高级", module: "M4", ability: "风险特警", type: "analysis", status: "locked" },
-    { id: "T09", name: "非经常性损益与宏观环境影响分析", level: "高级", module: "M5", ability: "综合分析", type: "analysis", status: "locked" },
-    { id: "T10", name: "动态仪表盘搭建与BI看板优化", level: "高级", module: "M6", ability: "可视化", type: "analysis", status: "locked" },
-    { id: "T11", name: "随堂测验·选择题（现金流/偿债/营运）", level: "初级", module: "M2", ability: "指标分析", type: "quiz", status: "done", score: 100 },
-    { id: "T12", name: "随堂练习·综合财报计算题", level: "中级", module: "M4", ability: "综合分析", type: "calc", status: "done", score: 92 }
+    { id: "T01", name: "认知利润表", level: "初级", module: "M1", ability: "盈利能力分析", type: "analysis", status: "done", score: 92 },
+    { id: "T02", name: "盈利能力建模分析", level: "中级", module: "M1", ability: "盈利能力分析", type: "analysis", status: "done", score: 88 },
+    { id: "T03", name: "盈利能力下滑问题追溯与管理建议", level: "高级", module: "M1", ability: "盈利能力分析", type: "analysis", status: "done", score: 90 },
+    { id: "T04", name: "认知资产负债表", level: "初级", module: "M2", ability: "财务状况评估", type: "analysis", status: "done", score: 86 },
+    { id: "T05", name: "营运能力分析", level: "中级", module: "M2", ability: "财务状况评估", type: "analysis", status: "active", score: null },
+    { id: "T06", name: "偿债能力与营运能力综合分析", level: "中级", module: "M2", ability: "财务状况评估", type: "analysis", status: "locked" },
+    { id: "T07", name: "偿债能力与营运能力管理建议", level: "高级", module: "M2", ability: "财务状况评估", type: "analysis", status: "locked" },
+    { id: "T08", name: "认知现金流量表", level: "初级", module: "M3", ability: "现金流诊断", type: "analysis", status: "locked" },
+    { id: "T09", name: "现金流建模分析", level: "中级", module: "M3", ability: "现金流诊断", type: "analysis", status: "locked" },
+    { id: "T10", name: "现金流深度分析与财务困境", level: "高级", module: "M3", ability: "现金流诊断", type: "analysis", status: "locked" },
+    { id: "T11", name: "撰写财务速览备忘录", level: "初级", module: "M4", ability: "综合财务分析", type: "analysis", status: "locked" },
+    { id: "T12", name: "综合财务分析看板设计", level: "中级", module: "M4", ability: "综合财务分析", type: "analysis", status: "locked" },
+    { id: "T13", name: "风险洞察与管理建议报告", level: "高级", module: "M4", ability: "综合财务分析", type: "analysis", status: "locked" }
   ],
   currentTask: null,
   lastFeedback: null,
   badges: [
     { n: "数据侦探", d: "发现关键异常指标", earned: true },
     { n: "报表达人", d: "准确解读三大报表", earned: true },
-    { n: "成本管家", d: "完成成本优化任务", earned: false },
+    { n: "现金流卫士", d: "完成现金流诊断任务", earned: false },
     { n: "图表设计师", d: "高质量可视化分析", earned: true },
     { n: "经营参谋", d: "提出有效改进建议", earned: false },
-    { n: "财务洞察官", d: "完成综合经营挑战", earned: false }
+    { n: "财务洞察官", d: "完成综合财务挑战", earned: false }
   ],
   leaderboard: [
     { nm: "王浩", xp: 880, cls: "财务2433" }, { nm: "林晓", xp: 640, cls: "财务2433" },
@@ -156,16 +205,16 @@ const PRESET_STUDENT = {
   ],
   streak: 5, accuracy: 89, lastActive: "今天 09:24",
   recommend: {
-    id: "T04", name: "多维度经营解析（产品/地区/渠道）", ability: "多维分析",
-    reason: "你已完成毛利率与费用率分析（M2 前半），下一步建议做多维度经营拆解，补齐「多维分析」短板后进入 M3 异常特征识别。"
+    id: "T06", name: "偿债能力与营运能力综合分析", ability: "财务状况评估",
+    reason: "你已完成营运能力分析（T05），下一步建议做偿债×营运能力交叉验证，补齐「财务状况评估」短板后进入 M3 现金流诊断。"
   },
   abilityProg: [
-    { k: "报表理解", v: 92 }, { k: "指标分析", v: 85 }, { k: "异常识别", v: 70 },
-    { k: "现金流分析", v: 64 }, { k: "可视化表达", v: 88 }, { k: "风险预警", v: 58 }
+    { k: "盈利能力分析", v: 88 }, { k: "财务状况评估", v: 78 },
+    { k: "现金流诊断", v: 66 }, { k: "综合财务分析", v: 60 }
   ],
   abilityRadar: {
-    axes: ["财报数据治理", "经营解析能力", "异常特征识别", "现金流分析", "风险预警能力", "可视化建模"],
-    cur: [78, 82, 76, 70, 58, 84], avg: [75, 72, 74, 70, 66, 71]
+    axes: ["盈利能力分析", "财务状况评估", "现金流诊断", "综合财务分析"],
+    cur: [88, 78, 66, 60], avg: [82, 74, 70, 62]
   },
   ethicsScenes: [
     { topic: "数据真实性", kp: "数据真实性核验", theme: "数据诚信", title: "数字背后的责任",
@@ -174,10 +223,9 @@ const PRESET_STUDENT = {
       case: "《会计法》明确要求会计核算以实际发生的经济业务为依据——虚构、提前确认收入均属违法。" }
   ],
   feed: [
-    { icon: "check", txt: "完成「三大报表结构解读与勾稽关系」，得分 88", time: "2 天前" },
-    { icon: "star", txt: "解锁「图表设计师」徽章", time: "3 天前" },
-    { icon: "trophy", txt: "班级排名上升至第 2 名", time: "本周" },
-    { icon: "bot", txt: "AI 导师为你推荐「多维度经营解析」", time: "今天" }
+    { icon: "check", txt: "完成「认知资产负债表」，得分 86", time: "2 天前" },
+    { icon: "star", txt: "解锁「报表达人」徽章", time: "3 天前" },
+    { icon: "bot", txt: "AI 导师为你推荐「偿债能力与营运能力综合分析」", time: "今天" }
   ]
 };
 
@@ -185,8 +233,9 @@ function loadStudent() {
   const base = JSON.parse(JSON.stringify(PRESET_STUDENT));
   const raw = lsGet(LS_STU) || {};
   const s = Object.assign({}, base, raw);
-  // 班级已统一为财务2433：学生身份与排行榜成员一并归一
+  // 班级已统一为财务2433：学生身份与排行榜成员一并归一；称号随版本统一覆盖，避免旧缓存残留
   s.cls = base.cls;
+  s.lvName = base.lvName;
   if (!Array.isArray(s.leaderboard) || !s.leaderboard.length) s.leaderboard = base.leaderboard;
   s.leaderboard = s.leaderboard.map(function (p, i) {
     return Object.assign({}, base.leaderboard[i] || { cls: base.cls }, p, { cls: base.cls });
@@ -194,7 +243,8 @@ function loadStudent() {
   if (!s.tasks) s.tasks = base.tasks;
   if (!s.badges) s.badges = base.badges;
   if (!s.ethicsScenes) s.ethicsScenes = base.ethicsScenes;
-  if (!s.feed) s.feed = base.feed;
+  // 动态为静态演示数据，随预置统一覆盖，避免旧缓存残留已下线条目（如班级排名）
+  s.feed = base.feed;
   lsSet(LS_STU, s);
   return s;
 }
@@ -225,34 +275,34 @@ const overallGrade = computed(function () {
 const VIEW_URL = {
   "student-task": "https://1040053947.yxd.ep.caih.com/apps/desktop/sapp/app_5ex10jl1o4/sapp_qguqtkatxm/box/form/form_ix7gbehpyi/0859277446244543?menuId=0859277446244543&resource_type=FORM"
 };
+// 三智能体卡片 → 平台菜单名（评学档案兼容旧菜单名“评学增值”）
+const TAB_OF = {
+  "student-task": ["技能训练"],
+  "student-ethics": ["立德润心"],
+  "student-growth": ["评学档案", "评学增值"]
+};
+function clickMenu(menuName) {
+  // 顶部内部 Tab 栏（inner-tabbar 下的 .tab-box）
+  const boxes = document.querySelectorAll('.inner-tabbar-list .tab-box, .tab-box');
+  for (let i = 0; i < boxes.length; i++) {
+    if ((boxes[i].textContent || "").indexOf(menuName) >= 0) { boxes[i].click(); return true; }
+  }
+  // 侧边菜单项
+  const items = document.querySelectorAll('.menu-box [class*="menu-item"], [class*="menu-item"]');
+  for (let i = 0; i < items.length; i++) {
+    if ((items[i].textContent || "").indexOf(menuName) >= 0) { items[i].click(); return true; }
+  }
+  return false;
+}
 
 // ============ 交互 ============
 function go(view) {
+  // ① 优先：模拟点击平台对应 Tab / 菜单项（无刷新）
+  const names = TAB_OF[view] || [];
+  for (let i = 0; i < names.length; i++) { if (clickMenu(names[i])) return; }
+
   const url = VIEW_URL[view];
   if (!url) { emit("navigate", view); return; }
-
-  // ① 优先：模拟点击平台顶部 Tab / 侧边菜单项（无刷新）
-  const tabName = { "student-task": "技能训练" }[view];
-  if (tabName) {
-    // 顶部内部 Tab 栏（inner-tabbar 下的 .tab-box）
-    const boxes = document.querySelectorAll('.inner-tabbar-list .tab-box, .tab-box');
-    for (let i = 0; i < boxes.length; i++) {
-      const t = boxes[i].textContent || "";
-      if (t.indexOf(tabName) >= 0) {
-        boxes[i].click();
-        return;
-      }
-    }
-    // 侧边菜单项
-    const items = document.querySelectorAll('.menu-box [class*="menu-item"], [class*="menu-item"]');
-    for (let i = 0; i < items.length; i++) {
-      const t = items[i].textContent || "";
-      if (t.indexOf(tabName) >= 0) {
-        items[i].click();
-        return;
-      }
-    }
-  }
 
   // ② 其次：平台 Vue Router（无刷新，仅改地址）
   try {
@@ -353,6 +403,7 @@ onMounted(function () { });
 .hero { background: linear-gradient(135deg, #2B6CD6 0%, #4D8BE8 60%, #6FA3F0 100%); border-radius: 10px; padding: 22px 22px 18px; color: #fff; box-shadow: 0 4px 14px rgba(43, 108, 214, .25); }
 .hero-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .hero-hello { font-size: 20px; font-weight: 700; }
+.hero-lv { display: inline-flex; align-items: center; margin-left: auto; font-size: 12px; font-weight: 600; background: rgba(13, 48, 110, .45); border: 1px solid rgba(255, 255, 255, .35); padding: 2px 10px; border-radius: 99px; }
 .hero-flame { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, .22); padding: 2px 10px; border-radius: 99px; }
 .xp-wrap { margin-bottom: 14px; }
 .xp-bar { width: 100%; height: 10px; background: rgba(255, 255, 255, .28); border-radius: 99px; overflow: hidden; }
@@ -360,14 +411,36 @@ onMounted(function () { });
 .hero-actions { display: flex; align-items: center; gap: 12px; }
 .hero-hint { font-size: 13px; opacity: .92; }
 
-/* ============ 三智能体协同（新配色 chip） ============ */
+/* ============ 三智能体协同（渐变卡片，可点击跳转） ============ */
 .agent-card { border: 2px dashed #86B0E8; background: #F8FBFF; }
 .agent-row { display: flex; flex-wrap: wrap; gap: 12px; }
-.agent-chip { padding: 16px 14px; border-radius: 8px; font-size: 16px; font-weight: 700; color: #fff; text-align: center; flex: 1; min-width: 110px; }
-.chip-ideo-new { background: #FF6B6B; }
-.chip-tech-new { background: #4D8BE8; }
-.chip-grow-new { background: #67C23A; }
+.agent-chip { position: relative; display: flex; align-items: center; gap: 10px; padding: 14px 14px 12px; border-radius: 10px; color: #fff; flex: 1; min-width: 170px; cursor: pointer; overflow: hidden; box-shadow: 0 2px 6px rgba(16, 38, 76, .12); transition: transform .18s ease, box-shadow .18s ease; }
+.agent-chip:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(16, 38, 76, .22); }
+.agent-chip::after { content: ""; position: absolute; right: -20px; top: -20px; width: 70px; height: 70px; border-radius: 50%; background: rgba(255, 255, 255, .14); }
+.chip-ideo-new { background: linear-gradient(135deg, #FF7B7B, #E54C4C); }
+.chip-tech-new { background: linear-gradient(135deg, #5B9BF0, #2B6CD6); }
+.chip-grow-new { background: linear-gradient(135deg, #7BD64C, #4CAF50); }
+.agent-ic { width: 34px; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, .22); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.agent-ic svg { width: 18px; height: 18px; }
+.agent-txt { flex: 1; min-width: 0; }
+.agent-txt b { display: block; font-size: 14px; line-height: 1.3; }
+.agent-txt small { display: block; font-size: 11px; opacity: .85; margin-top: 2px; }
+.agent-go { position: relative; z-index: 1; font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, .22); padding: 2px 9px; border-radius: 99px; white-space: nowrap; }
 .agent-desc { color: #52A443; font-size: 14px; font-weight: 600; line-height: 22px; }
+
+/* ============ 任务地图 ============ */
+.card-sub { margin-left: auto; font-size: 12px; font-weight: 400; color: #97A1B2; }
+.task-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.task-card { background: #fff; border: 1px solid #E3E9F2; border-radius: 8px; padding: 16px; transition: all .15s ease; position: relative; overflow: hidden; cursor: pointer; }
+.task-card:hover { border-color: #C7D6EC; box-shadow: 0 2px 8px rgba(16, 38, 76, .08); }
+.task-card.locked { opacity: .62; background: #F7FAFD; }
+.tm-lv { position: absolute; top: 0; right: 0; padding: 3px 10px; border-bottom-left-radius: 8px; }
+.task-card h4 { font-size: 14px; font-weight: 600; color: #1F2733; margin: 6px 0 8px; padding-right: 54px; line-height: 1.5; }
+.tm-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tm-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+.tm-score { font-weight: 600; color: #3C8E12; font-size: 13px; }
+.tm-go { font-size: 12px; color: #97A1B2; }
+.tm-lk { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 5px; color: #97A1B2; font-size: 13px; background: rgba(247, 250, 253, .45); }
 
 /* ============ 3 列 × 2 行 网格 ============ */
 .grid-3 { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 16px; }

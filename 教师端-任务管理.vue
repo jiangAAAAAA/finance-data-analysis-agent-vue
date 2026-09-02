@@ -57,8 +57,12 @@
         <div class="m-b">
           <div class="field" :class="{ invalid: !modal.valid }">
             <label>任务名称</label>
-            <input v-model="modal.form.name" placeholder="如：毛利率异常分析与费用率排查" />
+            <input v-model="modal.form.name" placeholder="如：现金流建模分析" />
             <div class="err">请输入任务名称</div>
+          </div>
+          <div class="field">
+            <label>任务内容</label>
+            <textarea v-model="modal.form.content" rows="3" placeholder="描述任务内容、数据范围与要求，AI 将结合任务名称识别标签"></textarea>
           </div>
           <div class="form-row">
             <div class="field">
@@ -76,7 +80,7 @@
           </div>
           <div class="field">
             <label>对应能力</label>
-            <input v-model="modal.form.ability" placeholder="如：指标分析" />
+            <input v-model="modal.form.ability" placeholder="如：财务状况评估" />
           </div>
           <div class="field">
             <label>状态</label>
@@ -94,6 +98,10 @@
               >{{ x }}</span>
             </div>
           </div>
+          <div class="field ai-field">
+            <button class="btn btn-ghost btn-sm" :disabled="aiLoading" @click="aiTags">{{ aiLoading ? '识别中…' : 'AI 一键识别标签' }}</button>
+            <span class="hint">依据任务名称与任务内容自动生成技能与思政标签</span>
+          </div>
           <div class="field">
             <label>思政资源标签</label>
             <div class="tsel-wrap">
@@ -103,10 +111,6 @@
                 @click="toggleTag('ideos', x)"
               >{{ x }}</span>
             </div>
-          </div>
-          <div class="field ai-field">
-            <button class="btn btn-ghost btn-sm" @click="aiTags">AI 一键识别标签</button>
-            <span class="hint">依据任务名称自动生成技能与思政标签（待接入）</span>
           </div>
         </div>
         <div class="m-f">
@@ -129,13 +133,14 @@ const emit = defineEmits(["navigate"]);
 // ============ 数据服务（localStorage 共享，PRESET 兜底） ============
 function lsGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 忽略 */ } }
-const LS_TEACHER = "fd_teacher_v1";
+const LS_TEACHER = "fd_teacher_v2";
 
-// ============ AI 占位（接入后替换 AI_KEY） ============
+// ============ AI 智能体配置（立德 Agent · Dify 风格接口） ============
 const AI_URL = "https://agent.gjt-smart.com/v1/chat-messages";
-const AI_KEY = "app-xxxxxx"; // TODO 占位
+const AI_KEY = "app-xplYEWYKIQmzCnudOlDlGHnD";
+const AI_USER = "task-manager";
 
-const SKILL_TAGS = ['财报数据治理', '常规经营解析', '异常特征识别', '现金流分析', '风险预警', '非经营与宏观支持', '可视化建模', '毛利率分析', '费用率分析', '流动比率', '速动比率', '资产负债率', '应收账款周转率', '利润质量评价', '杜邦分析'];
+const SKILL_TAGS = ['利润表认知', '盈利能力建模分析', '盈利下滑追溯', '资产负债表结构分析', '营运能力分析', '偿债能力分析', '现金流量表解读', '现金流建模分析', '财务困境诊断', '财务速览备忘录', '综合看板设计', '风险洞察', '管理建议撰写'];
 const IDEOLOGY_TAGS = ['大国工匠', '行业楷模', '科技自立自强案例', '行业伦理', '红色财经资源', '政策文件', '专业发展史', '课程思政教学案例'];
 
 const PRESET_TEACHER = {
@@ -144,38 +149,47 @@ const PRESET_TEACHER = {
   classStats: { completion: 82, avg: 79, active: 31, total: 38 },
   weeklySubs: 16,
   completionBars: [
-    ["T03 毛利率分析", 93], ["T04 费用排查", 88], ["T08 驾驶舱诊断", 75]
+    ["T01 利润表认知", 93], ["T05 营运能力分析", 88], ["T12 综合看板设计", 75]
   ],
   tasks: [
-    { id: "T03", name: "毛利率异常分析与费用率排查", level: "初级", diff: "易", ability: "指标分析", status: "已发布", subs: 28, skills: ["毛利率分析", "费用率分析"], ideos: ["行业伦理"] },
-    { id: "T04", name: "多维度经营解析（产品/地区/渠道）", level: "中级", diff: "中", ability: "多维分析", status: "已发布", subs: 21, skills: ["常规经营解析"], ideos: ["课程思政教学案例"] },
-    { id: "T07", name: "现金流分析与利润质量评价", level: "中级", diff: "中", ability: "现金流分析", status: "草稿", subs: 0, skills: ["现金流分析", "利润质量评价"], ideos: [] },
-    { id: "T08", name: "偿债能力分层与风险预警诊断", level: "高级", diff: "难", ability: "风险特警", status: "已发布", subs: 12, skills: ["风险预警"], ideos: ["政策文件"] }
+    { id: "T01", name: "认知利润表", content: "认知利润表基本结构，完成「财务费用求证」小实验，理解各利润项目的计算路径。", level: "初级", diff: "易", ability: "盈利能力分析", status: "已发布", subs: 34, skills: ["利润表认知"], ideos: ["大国工匠"] },
+    { id: "T02", name: "盈利能力建模分析", content: "以收入、成本、费用数据搭建分析模型，完成「盈利能力建模分析」实验并撰写分析报告。", level: "中级", diff: "中", ability: "盈利能力分析", status: "已发布", subs: 29, skills: ["盈利能力建模分析"], ideos: ["课程思政教学案例"] },
+    { id: "T03", name: "盈利能力下滑问题追溯与管理建议", content: "基于建模结论追溯盈利能力下滑成因，完成「盈利能力下滑问题追溯」实验并撰写管理建议。", level: "高级", diff: "难", ability: "盈利能力分析", status: "已发布", subs: 15, skills: ["盈利下滑追溯", "管理建议撰写"], ideos: ["行业伦理"] },
+    { id: "T04", name: "认知资产负债表", content: "认知资产负债表结构，理解「资产总额=负债总额+所有者权益总额」平衡规则，完成资产负债表结构分析实验。", level: "初级", diff: "易", ability: "财务状况评估", status: "已发布", subs: 33, skills: ["资产负债表结构分析"], ideos: ["红色财经资源"] },
+    { id: "T05", name: "营运能力分析", content: "测算应收账款周转率等营运能力指标，完成营运能力分析实验并输出解读结论。", level: "中级", diff: "中", ability: "财务状况评估", status: "已发布", subs: 26, skills: ["营运能力分析"], ideos: [] },
+    { id: "T06", name: "偿债能力与营运能力综合分析", content: "完成「偿债能力与营运能力综合实验」，对两类能力进行交叉验证并统一指标口径。", level: "中级", diff: "中", ability: "财务状况评估", status: "已发布", subs: 22, skills: ["偿债能力分析", "营运能力分析"], ideos: ["政策文件"] },
+    { id: "T07", name: "偿债能力与营运能力管理建议", content: "基于综合实验结论撰写偿债与营运能力管理建议，完成管理建议撰写实验。", level: "高级", diff: "难", ability: "财务状况评估", status: "已发布", subs: 11, skills: ["管理建议撰写"], ideos: ["行业楷模"] },
+    { id: "T08", name: "认知现金流量表", content: "认知现金流量表结构，理解各项目含义，完成「现金流量表结构与现金流解读」实验。", level: "初级", diff: "易", ability: "现金流诊断", status: "已发布", subs: 30, skills: ["现金流量表解读"], ideos: [] },
+    { id: "T09", name: "现金流建模分析", content: "搭建现金流分析模型，完成「现金流建模分析」实验并撰写分析报告。", level: "中级", diff: "中", ability: "现金流诊断", status: "草稿", subs: 0, skills: ["现金流建模分析"], ideos: [] },
+    { id: "T10", name: "现金流深度分析与财务困境", content: "基于建模结论深度分析现金流质量并判断财务困境，撰写财务困境诊断报告。", level: "高级", diff: "难", ability: "现金流诊断", status: "草稿", subs: 0, skills: ["财务困境诊断"], ideos: ["行业伦理"] },
+    { id: "T11", name: "撰写财务速览备忘录", content: "综合阅读三大报表，完成「财务速览」实验并撰写财务速览备忘录。", level: "初级", diff: "易", ability: "综合财务分析", status: "已发布", subs: 27, skills: ["财务速览备忘录"], ideos: ["专业发展史"] },
+    { id: "T12", name: "综合财务分析看板设计", content: "设计综合财务分析看板，完成「综合看板」实验并撰写看板设计说明。", level: "中级", diff: "中", ability: "综合财务分析", status: "已发布", subs: 18, skills: ["综合看板设计"], ideos: ["科技自立自强案例"] },
+    { id: "T13", name: "风险洞察与管理建议报告", content: "基于综合分析结论进行风险洞察，完成「风险洞察与管理建议」实验并撰写管理建议报告。", level: "高级", diff: "难", ability: "综合财务分析", status: "草稿", subs: 0, skills: ["风险洞察", "管理建议撰写"], ideos: ["政策文件"] }
   ],
   submissions: [
-    { id: 1, student: "王浩", task: "T03 毛利率异常分析", ai: 76, status: "待复核", errors: ["结论缺少业务逻辑", "图表选择不当"] },
-    { id: 2, student: "陈雨", task: "T03 毛利率异常分析", ai: 91, status: "已复核", errors: [] },
-    { id: 3, student: "李娜", task: "T04 多维度经营解析", ai: 68, status: "待复核", errors: ["公式错误", "指标理解错误"] },
-    { id: 4, student: "赵磊", task: "T08 风险预警诊断", ai: 83, status: "待复核", errors: ["流动比率计算口径不一致"] }
+    { id: 1, student: "王浩", task: "T05 营运能力分析", ai: 76, status: "待复核", errors: ["结论缺少业务逻辑", "图表选择不当"] },
+    { id: 2, student: "陈雨", task: "T03 盈利能力下滑问题追溯", ai: 91, status: "已复核", errors: [] },
+    { id: 3, student: "李娜", task: "T06 偿债与营运能力综合", ai: 68, status: "待复核", errors: ["公式错误", "指标理解错误"] },
+    { id: 4, student: "赵磊", task: "T07 偿债与营运管理建议", ai: 83, status: "待复核", errors: ["流动比率计算口径不一致"] }
   ],
   errorDist: [
     { k: "公式错误", v: 18 }, { k: "指标理解错误", v: 26 }, { k: "图表选择不当", v: 14 },
     { k: "结论缺业务逻辑", v: 22 }, { k: "分析不全面", v: 11 }
   ],
   radar: {
-    axes: ["财报数据治理", "经营解析能力", "异常特征识别", "现金流分析", "风险预警能力", "可视化建模"],
-    cur: [82, 76, 70, 64, 88, 58], avg: [75, 72, 68, 70, 74, 66]
+    axes: ["盈利能力分析", "财务状况评估", "现金流诊断", "综合财务分析"],
+    cur: [82, 76, 68, 60], avg: [80, 74, 70, 62]
   },
   needsFocus: [
-    { nm: "李娜", score: 68, status: "待复核", issue: "T04 多维解析公式错误 + 指标理解偏差，建议一对一辅导" },
-    { nm: "赵磊", score: 83, status: "待复核", issue: "T08 流动比率计算口径不一致，需确认是否剔除预付款项" },
+    { nm: "李娜", score: 68, status: "待复核", issue: "T06 综合实验公式错误 + 指标理解偏差，建议一对一辅导" },
+    { nm: "赵磊", score: 83, status: "待复核", issue: "T07 流动比率计算口径不一致，需确认是否剔除预付款项" },
     { nm: "周婷", score: null, status: "未提交", issue: "本周未提交任何任务，活跃度明显下降，需提醒" }
   ],
   activity: [
-    { icon: "upload", txt: "李娜 提交了「T04 多维度经营解析」", time: "10 分钟前" },
-    { icon: "check", txt: "陈雨 的「T03 毛利率异常分析」复核通过", time: "1 小时前" },
+    { icon: "upload", txt: "李娜 提交了「T06 偿债能力与营运能力综合」", time: "10 分钟前" },
+    { icon: "check", txt: "陈雨 的「T03 盈利能力下滑问题追溯」复核通过", time: "1 小时前" },
     { icon: "bot", txt: "AI 完成 4 份作业自动评分", time: "今天" },
-    { icon: "warn", txt: "赵磊「T08 风险预警诊断」触发薄弱能力预警", time: "昨天" }
+    { icon: "warn", txt: "赵磊「T07 偿债与营运管理建议」触发薄弱能力预警", time: "昨天" }
   ]
 };
 
@@ -199,11 +213,12 @@ function loadTeacher() {
 const teacher = ref(loadTeacher());
 const tip = ref("");
 let tipTimer = null;
+const aiLoading = ref(false);
 function showTip(t) { tip.value = t; clearTimeout(tipTimer); tipTimer = setTimeout(function () { tip.value = ""; }, 2400); }
 
 const modal = ref({
   show: false, isEdit: false, valid: true, editId: null,
-  form: { name: '', level: '初级', diff: '易', ability: '', status: '草稿', skills: [], ideos: [] }
+  form: { name: '', content: '', level: '初级', diff: '易', ability: '', status: '草稿', skills: [], ideos: [] }
 });
 
 // ============ 交互 ============
@@ -216,13 +231,13 @@ function openModal(task) {
     modal.value.isEdit = true;
     modal.value.editId = task.id;
     modal.value.form = {
-      name: task.name, level: task.level, diff: task.diff, ability: task.ability,
+      name: task.name, content: task.content || '', level: task.level, diff: task.diff, ability: task.ability,
       status: task.status, skills: [].concat(task.skills || []), ideos: [].concat(task.ideos || [])
     };
   } else {
     modal.value.isEdit = false;
     modal.value.editId = null;
-    modal.value.form = { name: '', level: '初级', diff: '易', ability: '', status: '草稿', skills: [], ideos: [] };
+    modal.value.form = { name: '', content: '', level: '初级', diff: '易', ability: '', status: '草稿', skills: [], ideos: [] };
   }
   modal.value.valid = true;
   modal.value.show = true;
@@ -239,13 +254,17 @@ function saveTask() {
   if (!f.name.trim()) { modal.value.valid = false; return; }
   if (modal.value.isEdit) {
     const t = teacher.value.tasks.find(function (x) { return x.id === modal.value.editId; });
-    if (t) Object.assign(t, { name: f.name, level: f.level, diff: f.diff, ability: f.ability, status: f.status, skills: [].concat(f.skills), ideos: [].concat(f.ideos) });
+    if (t) Object.assign(t, { name: f.name, content: f.content, level: f.level, diff: f.diff, ability: f.ability, status: f.status, skills: [].concat(f.skills), ideos: [].concat(f.ideos) });
     lsSet(LS_TEACHER, teacher.value);
     showTip("任务已更新");
   } else {
-    const nid = 'T' + String(teacher.value.tasks.length + 10);
+    const nid = (function () {
+      let mx = 0;
+      teacher.value.tasks.forEach(function (x) { const n = parseInt(String(x.id).replace(/\D/g, ""), 10); if (n > mx) mx = n; });
+      return 'T' + String(mx + 1).padStart(2, '0');
+    })();
     teacher.value.tasks.push({
-      id: nid, name: f.name, level: f.level, diff: f.diff, ability: f.ability,
+      id: nid, name: f.name, content: f.content, level: f.level, diff: f.diff, ability: f.ability,
       status: f.status, subs: 0, skills: [].concat(f.skills), ideos: [].concat(f.ideos)
     });
     lsSet(LS_TEACHER, teacher.value);
@@ -258,7 +277,63 @@ function delTask(t) {
   lsSet(LS_TEACHER, teacher.value);
   showTip("任务 " + t.id + " 已删除");
 }
-function aiTags() { showTip("AI 功能待接入：请在 AI_KEY 填入智能体 API Key"); }
+// ============ AI 一键识别标签（依据任务名称与任务内容） ============
+function pickTags(list, max) {
+  const out = [];
+  (list || []).forEach(function (x) {
+    const s = String(x == null ? "" : x).trim();
+    if (s && out.indexOf(s) < 0 && out.length < max) out.push(s);
+  });
+  return out;
+}
+function localTagScan() {
+  const text = (modal.value.form.name || "") + " " + (modal.value.form.content || "");
+  modal.value.form.skills = SKILL_TAGS.filter(function (s) { return text.indexOf(s) >= 0; }).slice(0, 4);
+  modal.value.form.ideos = IDEOLOGY_TAGS.filter(function (s) { return text.indexOf(s) >= 0; }).slice(0, 3);
+}
+async function aiTags() {
+  const f = modal.value.form;
+  if (!f.name.trim()) { showTip("请先填写任务名称"); return; }
+  aiLoading.value = true;
+  try {
+    const resp = await fetch(AI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + AI_KEY },
+      body: JSON.stringify({
+        inputs: {
+          is_gen_label: "1",
+          task_name: f.name,
+          task_content: f.content || ""
+        },
+        response_mode: "blocking",
+        query: "请根据任务名称和任务内容识别标签，只输出 JSON：{\"skill_knowledge_tags\":[\"技能知识标签\"],\"ideological_resource_tags\":[\"思政资源标签\"]}。技能知识标签选 0-4 个，思政资源标签选 0-3 个，不要输出其他内容。",
+        user: AI_USER,
+        files: []
+      })
+    });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    const raw = (data && data.answer) || "";
+    const m = String(raw).match(/\{[\s\S]*\}/);
+    if (!m) throw new Error("AI 返回格式异常");
+    const obj = JSON.parse(m[0]);
+    const skills = pickTags(obj.skill_knowledge_tags, 4);
+    const ideos = pickTags(obj.ideological_resource_tags, 3);
+    if (!skills.length && !ideos.length) {
+      localTagScan();
+      showTip("AI 未返回有效标签，已按关键词智能匹配");
+    } else {
+      modal.value.form.skills = skills;
+      modal.value.form.ideos = ideos;
+      showTip("已生成 " + skills.length + " 个技能标签、" + ideos.length + " 个思政标签");
+    }
+  } catch (err) {
+    localTagScan();
+    showTip("AI 请求失败，已按关键词智能匹配：" + (err && err.message ? err.message : err));
+  } finally {
+    aiLoading.value = false;
+  }
+}
 
 onMounted(function () { });
 </script>

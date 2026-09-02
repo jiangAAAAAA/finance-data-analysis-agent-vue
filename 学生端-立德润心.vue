@@ -119,33 +119,34 @@ const AI_KEY = "app-xplYEWYKIQmzCnudOlDlGHnD";
 // ============ 数据服务（localStorage 共享，PRESET 兜底） ============
 function lsGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 忽略 */ } }
-const LS_STU = "fd_student_v1";
+const LS_STU = "fd_student_v2";
 
 const PRESET_STUDENT = {
-  name: "林晓", cls: "财务2433", level: 3, lvName: "数据分析员", xp: 640, xpMax: 1000,
+  name: "林晓", cls: "财务2433", level: 3, lvName: "财务分析师", xp: 640, xpMax: 1000,
   tasks: [
-    { id: "T01", name: "财报数据治理：多系统对账与清洗", level: "初级", module: "M1", ability: "数据治理", status: "done", score: 92 },
-    { id: "T02", name: "三大报表结构解读与勾稽关系", level: "初级", module: "M1", ability: "报表理解", status: "done", score: 88 },
-    { id: "T03", name: "毛利率异常分析与费用率排查", level: "初级", module: "M2", ability: "指标分析", type: "analysis", status: "active", score: null },
-    { id: "T04", name: "多维度经营解析（产品/地区/渠道）", level: "中级", module: "M2", ability: "多维分析", type: "analysis", status: "locked" },
-    { id: "T05", name: "异常特征识别与帕累托分析", level: "中级", module: "M3", ability: "营运能力", type: "analysis", status: "locked" },
-    { id: "T06", name: "成本结构量价拆分模型", level: "中级", module: "M3", ability: "成本控制", type: "analysis", status: "locked" },
-    { id: "T07", name: "现金流分析与利润质量评价", level: "中级", module: "M4", ability: "现金流分析", type: "analysis", status: "locked" },
-    { id: "T08", name: "偿债能力分层与风险预警诊断", level: "高级", module: "M4", ability: "风险特警", type: "analysis", status: "locked" },
-    { id: "T09", name: "非经常性损益与宏观环境影响分析", level: "高级", module: "M5", ability: "综合分析", type: "analysis", status: "locked" },
-    { id: "T10", name: "动态仪表盘搭建与BI看板优化", level: "高级", module: "M6", ability: "可视化", type: "analysis", status: "locked" },
-    { id: "T11", name: "随堂测验·选择题（现金流/偿债/营运）", level: "初级", module: "M2", ability: "指标分析", type: "quiz", status: "done", score: 100 },
-    { id: "T12", name: "随堂练习·综合财报计算题", level: "中级", module: "M4", ability: "综合分析", type: "calc", status: "done", score: 92 }
+    { id: "T01", name: "认知利润表", level: "初级", module: "M1", ability: "盈利能力分析", type: "analysis", status: "done", score: 92 },
+    { id: "T02", name: "盈利能力建模分析", level: "中级", module: "M1", ability: "盈利能力分析", type: "analysis", status: "done", score: 88 },
+    { id: "T03", name: "盈利能力下滑问题追溯与管理建议", level: "高级", module: "M1", ability: "盈利能力分析", type: "analysis", status: "done", score: 90 },
+    { id: "T04", name: "认知资产负债表", level: "初级", module: "M2", ability: "财务状况评估", type: "analysis", status: "done", score: 86 },
+    { id: "T05", name: "营运能力分析", level: "中级", module: "M2", ability: "财务状况评估", type: "analysis", status: "active", score: null },
+    { id: "T06", name: "偿债能力与营运能力综合分析", level: "中级", module: "M2", ability: "财务状况评估", type: "analysis", status: "locked" },
+    { id: "T07", name: "偿债能力与营运能力管理建议", level: "高级", module: "M2", ability: "财务状况评估", type: "analysis", status: "locked" },
+    { id: "T08", name: "认知现金流量表", level: "初级", module: "M3", ability: "现金流诊断", type: "analysis", status: "locked" },
+    { id: "T09", name: "现金流建模分析", level: "中级", module: "M3", ability: "现金流诊断", type: "analysis", status: "locked" },
+    { id: "T10", name: "现金流深度分析与财务困境", level: "高级", module: "M3", ability: "现金流诊断", type: "analysis", status: "locked" },
+    { id: "T11", name: "撰写财务速览备忘录", level: "初级", module: "M4", ability: "综合财务分析", type: "analysis", status: "locked" },
+    { id: "T12", name: "综合财务分析看板设计", level: "中级", module: "M4", ability: "综合财务分析", type: "analysis", status: "locked" },
+    { id: "T13", name: "风险洞察与管理建议报告", level: "高级", module: "M4", ability: "综合财务分析", type: "analysis", status: "locked" }
   ],
   currentTask: null,
   lastFeedback: null,
   badges: [
     { n: "数据侦探", d: "发现关键异常指标", earned: true },
     { n: "报表达人", d: "准确解读三大报表", earned: true },
-    { n: "成本管家", d: "完成成本优化任务", earned: false },
+    { n: "现金流卫士", d: "完成现金流诊断任务", earned: false },
     { n: "图表设计师", d: "高质量可视化分析", earned: true },
     { n: "经营参谋", d: "提出有效改进建议", earned: false },
-    { n: "财务洞察官", d: "完成综合经营挑战", earned: false }
+    { n: "财务洞察官", d: "完成综合财务挑战", earned: false }
   ],
   leaderboard: [
     { nm: "王浩", xp: 880, cls: "财务2433" }, { nm: "林晓", xp: 640, cls: "财务2433" },
@@ -154,16 +155,16 @@ const PRESET_STUDENT = {
   ],
   streak: 5, accuracy: 89, lastActive: "今天 09:24",
   recommend: {
-    id: "T04", name: "多维度经营解析（产品/地区/渠道）", ability: "多维分析",
-    reason: "你已完成毛利率与费用率分析（M2 前半），下一步建议做多维度经营拆解，补齐「多维分析」短板后进入 M3 异常特征识别。"
+    id: "T06", name: "偿债能力与营运能力综合分析", ability: "财务状况评估",
+    reason: "你已完成营运能力分析（T05），下一步建议做偿债×营运能力交叉验证，补齐「财务状况评估」短板后进入 M3 现金流诊断。"
   },
   abilityProg: [
-    { k: "报表理解", v: 92 }, { k: "指标分析", v: 85 }, { k: "异常识别", v: 70 },
-    { k: "现金流分析", v: 64 }, { k: "可视化表达", v: 88 }, { k: "风险预警", v: 58 }
+    { k: "盈利能力分析", v: 88 }, { k: "财务状况评估", v: 78 },
+    { k: "现金流诊断", v: 66 }, { k: "综合财务分析", v: 60 }
   ],
   abilityRadar: {
-    axes: ["财报数据治理", "经营解析能力", "异常特征识别", "现金流分析", "风险预警能力", "可视化建模"],
-    cur: [78, 82, 76, 70, 58, 84], avg: [75, 72, 74, 70, 66, 71]
+    axes: ["盈利能力分析", "财务状况评估", "现金流诊断", "综合财务分析"],
+    cur: [88, 78, 66, 60], avg: [82, 74, 70, 62]
   },
   ethicsScenes: [
     { topic: "数据真实性", kp: "数据真实性核验", theme: "数据诚信", title: "数字背后的责任",
@@ -192,10 +193,9 @@ const PRESET_STUDENT = {
       case: "利用未公开财务信息交易属内幕交易，知情人负有法定保密与回避义务。" }
   ],
   feed: [
-    { icon: "check", txt: "完成「三大报表结构解读与勾稽关系」，得分 88", time: "2 天前" },
-    { icon: "star", txt: "解锁「图表设计师」徽章", time: "3 天前" },
-    { icon: "trophy", txt: "班级排名上升至第 2 名", time: "本周" },
-    { icon: "bot", txt: "AI 导师为你推荐「多维度经营解析」", time: "今天" }
+    { icon: "check", txt: "完成「认知资产负债表」，得分 86", time: "2 天前" },
+    { icon: "star", txt: "解锁「报表达人」徽章", time: "3 天前" },
+    { icon: "bot", txt: "AI 导师为你推荐「偿债能力与营运能力综合分析」", time: "今天" }
   ]
 };
 
@@ -203,8 +203,9 @@ function loadStudent() {
   const base = JSON.parse(JSON.stringify(PRESET_STUDENT));
   const raw = lsGet(LS_STU) || {};
   const s = Object.assign({}, base, raw);
-  // 班级已统一为财务2433：学生身份与排行榜成员一并归一
+  // 班级已统一为财务2433：学生身份与排行榜成员一并归一；称号随版本统一覆盖，避免旧缓存残留
   s.cls = base.cls;
+  s.lvName = base.lvName;
   if (!Array.isArray(s.leaderboard) || !s.leaderboard.length) s.leaderboard = base.leaderboard;
   s.leaderboard = s.leaderboard.map(function (p, i) {
     return Object.assign({}, base.leaderboard[i] || { cls: base.cls }, p, { cls: base.cls });
@@ -212,7 +213,8 @@ function loadStudent() {
   if (!s.tasks) s.tasks = base.tasks;
   if (!s.badges) s.badges = base.badges;
   if (!s.ethicsScenes) s.ethicsScenes = base.ethicsScenes;
-  if (!s.feed) s.feed = base.feed;
+  // 动态为静态演示数据，随预置统一覆盖，避免旧缓存残留已下线条目（如班级排名）
+  s.feed = base.feed;
   lsSet(LS_STU, s);
   return s;
 }
@@ -272,6 +274,7 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + AI_KEY },
       body: JSON.stringify({
         inputs: {
+          is_gen_label: "0",
           course_name: "财务大数据分析",
           knowledge_point: c.kp,
           task_context: c.scene
