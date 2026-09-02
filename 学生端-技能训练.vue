@@ -4,7 +4,7 @@
     <div class="page-head">
       <div class="page-head-bar"></div>
       <span class="page-head-title">技能训练</span>
-      <span class="page-head-sub">炼技Agent·AI伴学与智能评分</span>
+      <span class="page-head-sub">炼技Agent · AI伴学与智能评分</span>
       <button class="btn btn-primary" @click="autoFill">一键填写</button>
       <button class="btn-ghost" @click="restoreDraft">恢复草稿</button>
     </div>

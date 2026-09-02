@@ -4,7 +4,7 @@
     <div class="page-head">
       <div class="page-head-bar"></div>
       <span class="page-head-title">立德润心</span>
-      <span class="page-head-sub">立德Agent·智能推送与引导思辨</span>
+      <span class="page-head-sub">立德Agent · 智能推送与引导思辨</span>
     </div>
 
     <!-- 主题覆盖横幅 -->
