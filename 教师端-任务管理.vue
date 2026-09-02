@@ -4,12 +4,118 @@
     <div class="page-head">
       <div class="page-head-bar"></div>
       <span class="page-head-title">任务管理</span>
-      <span class="page-head-sub">共 {{ teacher.tasks.length }} 个任务 · 支持新增、编辑、删除与发布</span>
-      <button class="btn btn-primary btn-sm" @click="openModal(null)">新增任务</button>
+      <span class="page-head-sub">立德Agent · 课程任务与思政要素智能匹配</span>
+    </div>
+
+    <!-- 课前备课出题：原新增任务弹窗拆出的创建区 -->
+    <div ref="prepCard" class="card prep-card" :class="{ 'prep-focus': prepHighlight }">
+      <div class="section-title">
+        <span class="bar"></span>课前备课出题 · 课程任务思政关联
+        <span class="prep-flow">填写任务信息 → 解析关联 → 结构化推送 → 确认入库 / 新增实训任务</span>
+      </div>
+
+      <div class="prep-box">
+        <div class="prep-form-title">填写课程任务信息</div>
+        <div class="prep-form-grid">
+          <div class="field prep-span">
+            <label>任务名称 <i class="required">*</i></label>
+            <input ref="prepNameInput" v-model="prep.form.name" placeholder="例：现金流分析与利润质量评价" />
+          </div>
+          <div class="field prep-span">
+            <label>任务内容 <i class="required">*</i></label>
+            <textarea v-model="prep.form.content" placeholder="例：评价某公司利润含金量，识别财务造假迹象与盈余管理风险"></textarea>
+          </div>
+          <div class="field">
+            <label>层级</label>
+            <select v-model="prep.form.level">
+              <option>初级</option><option>中级</option><option>高级</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>难度</label>
+            <select v-model="prep.form.diff">
+              <option>易</option><option>中</option><option>难</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>对应能力</label>
+            <select v-model="prep.form.ability">
+              <option>指标分析</option><option>多维分析</option><option>现金流分析</option>
+              <option>风险预警</option><option>可视化建模</option><option>财报数据治理</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" :disabled="aiLoading" @click="parseTask">
+          {{ aiLoading ? '解析中…' : '立德 Agent 解析关联' }}
+        </button>
+      </div>
+
+      <div v-if="prep.result" class="prep-res">
+        <div class="prep-tip">
+          <b>立德 Agent 已完成解析关联</b>：AI 识别出 {{ prep.result.skills.length }} 个技能知识标签、
+          {{ prep.result.ideos.length }} 个思政资源标签，推送 {{ prep.result.rows.length }} 条思政关联建议。
+          可点击标签增减，修改后将同步应用于新增任务。
+        </div>
+        <div class="prep-tags">
+          <div class="prep-tag-label">技能知识标签 <span>（点击多选 / 增减）</span></div>
+          <div class="tsel-wrap">
+            <span v-for="x in SKILL_TAGS" :key="'ps' + x" class="tsel"
+              :class="{ on: prep.result.skills.includes(x) }" @click="togglePrepTag('skills', x)">{{ x }}</span>
+          </div>
+          <div class="prep-tag-label">思政资源标签 <span>（点击多选 / 增减）</span></div>
+          <div class="tsel-wrap">
+            <span v-for="x in IDEOLOGY_TAGS" :key="'pi' + x" class="tsel"
+              :class="{ on: prep.result.ideos.includes(x) }" @click="togglePrepTag('ideos', x)">{{ x }}</span>
+          </div>
+        </div>
+
+        <div class="scroll-x">
+          <table class="match-table">
+            <thead>
+              <tr>
+                <th>原任务</th><th>知识点</th><th>思政要素</th><th>关联素材</th>
+                <th>来源</th><th>思政融入建议</th><th>匹配度</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in prep.result.rows" :key="index">
+                <td>{{ prep.form.name }}——{{ prep.form.content }}</td>
+                <td><b>{{ row.kp }}</b></td>
+                <td>
+                  <span v-if="row.cross" class="cross-badge">交叉</span>
+                  <span class="tag tag-blue">{{ row.theme }}</span>
+                </td>
+                <td class="material">{{ row.material }}</td>
+                <td class="muted small">{{ row.src }}</td>
+                <td class="suggestion">{{ row.suggestion }}</td>
+                <td>
+                  <span class="match-num" :class="matchLevel(row.match)">{{ row.match }}%</span>
+                  <div v-if="row.cross" class="muted tiny">双标签命中</div>
+                </td>
+                <td>
+                  <span v-if="row.confirmed" class="tag tag-green">已入库</span>
+                  <button v-else class="btn btn-primary btn-sm" @click="confirmRow(row)">确认入库</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="prep-actions">
+          <template v-if="prep.result.taskAdded">
+            <span class="tag tag-green">已新增为实训任务</span>
+            <span class="muted small">已作为草稿加入下方任务列表，标签自动带入，可编辑后发布</span>
+          </template>
+          <template v-else>
+            <button class="btn btn-primary" @click="addTaskFromPrep">确认入库并新增为实训任务</button>
+            <span class="muted small">未入库的思政关联将一并确认入库；任务以草稿加入下方任务列表</span>
+          </template>
+        </div>
+      </div>
     </div>
 
     <!-- 任务列表 -->
-    <div class="card">
+    <div class="card mt">
       <div class="section-title"><span class="bar"></span>任务列表</div>
       <div class="table-wrap">
         <table>
@@ -21,7 +127,10 @@
           </thead>
           <tbody>
             <tr v-for="t in teacher.tasks" :key="t.id">
-              <td class="task-name"><b>{{ t.id }}</b> {{ t.name }}</td>
+              <td class="task-name">
+                <b>{{ t.id }}</b> {{ t.name }}
+                <span v-if="t.from === 'prep'" class="tag tag-orange">备课出题</span>
+              </td>
               <td><span class="tag" :class="lvTag(t.level)">{{ t.level }}</span></td>
               <td>{{ t.ability }}</td>
               <td>{{ t.diff }}</td>
@@ -47,11 +156,11 @@
       </div>
     </div>
 
-    <!-- 新增 / 编辑弹窗 -->
+    <!-- 编辑任务弹窗 -->
     <div v-if="modal.show" class="mask" @click.self="closeModal">
       <div class="modal">
         <div class="m-h">
-          {{ modal.isEdit ? '编辑任务' : '新增任务' }}
+          编辑任务
           <button class="x-btn" @click="closeModal">✕</button>
         </div>
         <div class="m-b">
@@ -126,7 +235,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, nextTick, onMounted } from "vue";
 
 const emit = defineEmits(["navigate"]);
 
@@ -134,6 +243,21 @@ const emit = defineEmits(["navigate"]);
 function lsGet(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 忽略 */ } }
 const LS_TEACHER = "fd_teacher_v2";
+const LS_IDEOLOGY = "fd_ideo_v2";
+
+const PRESET_IDEOLOGY_RESOURCES = [
+  { id: "R1", name: "把账做准的人——大国工匠徐春梅", ideo: ["大国工匠", "课程思政教学案例"], skill: ["利润表认知", "盈利能力建模分析"], src: "课程思政教学案例库" },
+  { id: "R2", name: "财务造假的代价——瑞幸咖啡舞弊警示", ideo: ["行业伦理", "红色财经资源"], skill: ["现金流建模分析", "财务困境诊断"], src: "红色财经资源·舞弊警示录" },
+  { id: "R3", name: "国产财务软件的突破", ideo: ["科技自立自强案例"], skill: ["综合看板设计"], src: "行业资讯·工信部专栏" },
+  { id: "R4", name: "边区经济中的财经纪律", ideo: ["红色财经资源", "政策文件"], skill: ["资产负债表结构分析"], src: "政策文件·红色财经史料" },
+  { id: "R5", name: "关于数据安全的若干规定", ideo: ["政策文件", "行业伦理"], skill: ["利润表认知", "现金流量表解读"], src: "政策文件·国家数据局" },
+  { id: "R6", name: "一张报表背后的十年——财务人的坚守", ideo: ["行业楷模", "专业发展史"], skill: ["盈利下滑追溯", "管理建议撰写"], src: "专业发展史·《财务人的坚守》" }
+];
+
+function loadIdeologyResources() {
+  const raw = lsGet(LS_IDEOLOGY);
+  return raw && Array.isArray(raw.resources) && raw.resources.length ? raw.resources : PRESET_IDEOLOGY_RESOURCES;
+}
 
 // ============ AI 智能体配置（立德 Agent · Dify 风格接口） ============
 const AI_URL = "https://agent.gjt-smart.com/v1/chat-messages";
@@ -221,24 +345,37 @@ const modal = ref({
   form: { name: '', content: '', level: '初级', diff: '易', ability: '', status: '草稿', skills: [], ideos: [] }
 });
 
+const prepCard = ref(null);
+const prepNameInput = ref(null);
+const prepHighlight = ref(false);
+const prep = ref({
+  form: { name: "", content: "", level: "中级", diff: "中", ability: "指标分析" },
+  result: null
+});
+
 // ============ 交互 ============
 function go(view) { emit("navigate", view); }
 function lvTag(lv) { return lv === "初级" ? "tag-blue" : lv === "中级" ? "tag-orange" : "tag-red"; }
 function tagCount(t) { return (t.skills || []).length + (t.ideos || []).length; }
 
+async function focusCreate() {
+  await nextTick();
+  if (prepCard.value) prepCard.value.scrollIntoView({ behavior: "smooth", block: "start" });
+  setTimeout(function () {
+    if (prepNameInput.value) prepNameInput.value.focus({ preventScroll: true });
+  }, 180);
+  prepHighlight.value = true;
+  setTimeout(function () { prepHighlight.value = false; }, 1200);
+}
+
 function openModal(task) {
-  if (task) {
-    modal.value.isEdit = true;
-    modal.value.editId = task.id;
-    modal.value.form = {
-      name: task.name, content: task.content || '', level: task.level, diff: task.diff, ability: task.ability,
-      status: task.status, skills: [].concat(task.skills || []), ideos: [].concat(task.ideos || [])
-    };
-  } else {
-    modal.value.isEdit = false;
-    modal.value.editId = null;
-    modal.value.form = { name: '', content: '', level: '初级', diff: '易', ability: '', status: '草稿', skills: [], ideos: [] };
-  }
+  if (!task) { focusCreate(); return; }
+  modal.value.isEdit = true;
+  modal.value.editId = task.id;
+  modal.value.form = {
+    name: task.name, content: task.content || '', level: task.level, diff: task.diff, ability: task.ability,
+    status: task.status, skills: [].concat(task.skills || []), ideos: [].concat(task.ideos || [])
+  };
   modal.value.valid = true;
   modal.value.show = true;
 }
@@ -277,6 +414,120 @@ function delTask(t) {
   lsSet(LS_TEACHER, teacher.value);
   showTip("任务 " + t.id + " 已删除");
 }
+
+// ============ 课前备课出题：原新增任务弹窗拆出的创建流程 ============
+function matchLevel(match) {
+  return match >= 90 ? "hi" : match >= 80 ? "mid" : "lo";
+}
+
+function prepSuggestion(task, kp, theme, material) {
+  return "在「" + task + "」中，围绕知识点【" + kp + "】融入思政要素【" + theme + "】，引用素材《" + material + "》，引导学生从专业能力与职业操守双重维度完成分析。";
+}
+
+function prepBuildRows(skills, ideos) {
+  const rows = [];
+  const used = new Set();
+  const resources = loadIdeologyResources();
+
+  resources.forEach(function (r) {
+    const ms = (r.skill || []).filter(function (x) { return skills.includes(x); });
+    const mi = (r.ideo || []).filter(function (x) { return ideos.includes(x); });
+    if (ms.length && mi.length) {
+      rows.push({
+        kp: ms[0], theme: mi[0], material: r.name, src: r.src,
+        match: Math.min(98, 92 + ms.length + mi.length), cross: true, confirmed: false
+      });
+      used.add(r.id);
+    }
+  });
+
+  resources.forEach(function (r) {
+    if (used.has(r.id)) return;
+    const ms = (r.skill || []).filter(function (x) { return skills.includes(x); });
+    if (ms.length) {
+      const mi = (r.ideo || []).filter(function (x) { return ideos.includes(x); });
+      rows.push({
+        kp: ms[0], theme: mi[0] || r.ideo[0], material: r.name, src: r.src,
+        match: Math.min(95, 86 + ms.length), cross: false, confirmed: false
+      });
+      used.add(r.id);
+    }
+  });
+
+  resources.forEach(function (r) {
+    if (used.has(r.id)) return;
+    const mi = (r.ideo || []).filter(function (x) { return ideos.includes(x); });
+    if (mi.length) {
+      const ms = (r.skill || []).filter(function (x) { return skills.includes(x); });
+      rows.push({
+        kp: ms[0] || r.skill[0], theme: mi[0], material: r.name, src: r.src,
+        match: Math.min(93, 84 + mi.length), cross: false, confirmed: false
+      });
+      used.add(r.id);
+    }
+  });
+
+  if (!rows.length) {
+    resources.slice(0, 3).forEach(function (r, i) {
+      rows.push({ kp: r.skill[0], theme: r.ideo[0], material: r.name, src: r.src, match: 82 - i * 4, cross: false, confirmed: false });
+    });
+  }
+
+  rows.sort(function (a, b) {
+    return Number(b.cross) - Number(a.cross) || b.match - a.match;
+  });
+  rows.forEach(function (row) {
+    row.suggestion = prepSuggestion(prep.value.form.name + "——" + prep.value.form.content, row.kp, row.theme, row.material);
+  });
+  return rows;
+}
+
+function togglePrepTag(kind, tag) {
+  if (!prep.value.result) return;
+  const arr = prep.value.result[kind];
+  const i = arr.indexOf(tag);
+  if (i >= 0) arr.splice(i, 1);
+  else arr.push(tag);
+}
+
+function confirmRow(row) {
+  row.confirmed = true;
+  showTip("已确认入库并应用于作业出题：" + row.kp + " ↔ " + row.material);
+}
+
+function addTaskFromPrep() {
+  const result = prep.value.result;
+  if (!result) return;
+  if (result.taskAdded) {
+    showTip("该课程任务已新增为实训任务，请在下方任务列表中编辑与发布");
+    return;
+  }
+
+  result.rows.forEach(function (row) { row.confirmed = true; });
+  let mx = 0;
+  teacher.value.tasks.forEach(function (x) {
+    const n = parseInt(String(x.id).replace(/\D/g, ""), 10);
+    if (n > mx) mx = n;
+  });
+  const nid = "T" + String(mx + 1).padStart(2, "0");
+  teacher.value.tasks.unshift({
+    id: nid,
+    name: prep.value.form.name,
+    content: prep.value.form.content,
+    level: prep.value.form.level,
+    diff: prep.value.form.diff,
+    ability: prep.value.form.ability,
+    status: "草稿",
+    subs: 0,
+    skills: [].concat(result.skills),
+    ideos: [].concat(result.ideos),
+    from: "prep"
+  });
+  result.taskAdded = true;
+  lsSet(LS_TEACHER, teacher.value);
+  showTip("思政关联已入库，已新增实训任务「" + prep.value.form.name + "」（草稿）");
+}
+
 // ============ AI 一键识别标签（依据任务名称与任务内容） ============
 function pickTags(list, max) {
   const out = [];
@@ -286,46 +537,89 @@ function pickTags(list, max) {
   });
   return out;
 }
+
+function scanTags(form) {
+  const text = (form.name || "") + " " + (form.content || "");
+  return {
+    skills: SKILL_TAGS.filter(function (s) { return text.indexOf(s) >= 0; }).slice(0, 4),
+    ideos: IDEOLOGY_TAGS.filter(function (s) { return text.indexOf(s) >= 0; }).slice(0, 3)
+  };
+}
+
+async function recognizeTags(form) {
+  const resp = await fetch(AI_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + AI_KEY },
+    body: JSON.stringify({
+      inputs: {
+        is_gen_label: "1",
+        task_name: form.name,
+        task_content: form.content || ""
+      },
+      response_mode: "blocking",
+      query: "请根据任务名称和任务内容识别标签，只输出 JSON：{\"skill_knowledge_tags\":[\"技能知识标签\"],\"ideological_resource_tags\":[\"思政资源标签\"]}。技能知识标签选 0-4 个，思政资源标签选 0-3 个，不要输出其他内容。",
+      user: AI_USER,
+      files: []
+    })
+  });
+  if (!resp.ok) throw new Error("HTTP " + resp.status);
+  const data = await resp.json();
+  const raw = (data && data.answer) || "";
+  const m = String(raw).match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("AI 返回格式异常");
+  const obj = JSON.parse(m[0]);
+  const skills = pickTags((obj.skill_knowledge_tags || []).filter(function (s) { return SKILL_TAGS.includes(s); }), 4);
+  const ideos = pickTags((obj.ideological_resource_tags || []).filter(function (s) { return IDEOLOGY_TAGS.includes(s); }), 3);
+  return { skills, ideos };
+}
+
+async function parseTask() {
+  const f = prep.value.form;
+  if (!f.name.trim()) { showTip("请先填写任务名称"); return; }
+  if (!f.content.trim()) { showTip("请先填写任务内容"); return; }
+  aiLoading.value = true;
+  try {
+    const tags = await recognizeTags(f);
+    const matched = tags.skills.length || tags.ideos.length ? tags : scanTags(f);
+    prep.value.result = {
+      skills: matched.skills,
+      ideos: matched.ideos,
+      rows: prepBuildRows(matched.skills, matched.ideos),
+      taskAdded: false
+    };
+    showTip("解析完成，请确认思政关联后新增任务");
+  } catch (err) {
+    const tags = scanTags(f);
+    prep.value.result = {
+      skills: tags.skills,
+      ideos: tags.ideos,
+      rows: prepBuildRows(tags.skills, tags.ideos),
+      taskAdded: false
+    };
+    showTip("AI 请求失败，已按关键词智能匹配：" + (err && err.message ? err.message : err));
+  } finally {
+    aiLoading.value = false;
+  }
+}
+
 function localTagScan() {
-  const text = (modal.value.form.name || "") + " " + (modal.value.form.content || "");
-  modal.value.form.skills = SKILL_TAGS.filter(function (s) { return text.indexOf(s) >= 0; }).slice(0, 4);
-  modal.value.form.ideos = IDEOLOGY_TAGS.filter(function (s) { return text.indexOf(s) >= 0; }).slice(0, 3);
+  const tags = scanTags(modal.value.form);
+  modal.value.form.skills = tags.skills;
+  modal.value.form.ideos = tags.ideos;
 }
 async function aiTags() {
   const f = modal.value.form;
   if (!f.name.trim()) { showTip("请先填写任务名称"); return; }
   aiLoading.value = true;
   try {
-    const resp = await fetch(AI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + AI_KEY },
-      body: JSON.stringify({
-        inputs: {
-          is_gen_label: "1",
-          task_name: f.name,
-          task_content: f.content || ""
-        },
-        response_mode: "blocking",
-        query: "请根据任务名称和任务内容识别标签，只输出 JSON：{\"skill_knowledge_tags\":[\"技能知识标签\"],\"ideological_resource_tags\":[\"思政资源标签\"]}。技能知识标签选 0-4 个，思政资源标签选 0-3 个，不要输出其他内容。",
-        user: AI_USER,
-        files: []
-      })
-    });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const data = await resp.json();
-    const raw = (data && data.answer) || "";
-    const m = String(raw).match(/\{[\s\S]*\}/);
-    if (!m) throw new Error("AI 返回格式异常");
-    const obj = JSON.parse(m[0]);
-    const skills = pickTags(obj.skill_knowledge_tags, 4);
-    const ideos = pickTags(obj.ideological_resource_tags, 3);
-    if (!skills.length && !ideos.length) {
+    const tags = await recognizeTags(f);
+    if (!tags.skills.length && !tags.ideos.length) {
       localTagScan();
       showTip("AI 未返回有效标签，已按关键词智能匹配");
     } else {
-      modal.value.form.skills = skills;
-      modal.value.form.ideos = ideos;
-      showTip("已生成 " + skills.length + " 个技能标签、" + ideos.length + " 个思政标签");
+      modal.value.form.skills = tags.skills;
+      modal.value.form.ideos = tags.ideos;
+      showTip("已生成 " + tags.skills.length + " 个技能标签、" + tags.ideos.length + " 个思政标签");
     }
   } catch (err) {
     localTagScan();
@@ -371,6 +665,52 @@ onMounted(function () { });
 .tag-gray { background: #F7FAFD; color: #97A1B2; }
 .tip { margin-top: 12px; background: #EAF2FC; border: 1px solid #DCEBFB; color: #1D4FA8; font-size: 13px; border-radius: 6px; padding: 8px 12px; }
 @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* ============ 课前备课出题：新增任务创建区 ============ */
+.prep-card { margin-bottom: 16px; transition: box-shadow .2s, border-color .2s; }
+.prep-card.prep-focus { border-color: #2B6CD6; box-shadow: 0 0 0 3px rgba(43, 108, 214, .14); }
+.section-title .prep-flow { margin-left: auto; font-size: 12px; color: #97A1B2; font-weight: 400; white-space: nowrap; }
+.prep-box {
+  border: 1px dashed #2B6CD6; border-radius: 8px; padding: 14px; background: #EAF2FC;
+}
+.prep-form-title { font-size: 13px; font-weight: 600; color: #1F2733; margin-bottom: 12px; }
+.prep-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.prep-form-grid .field { margin-bottom: 0; }
+.prep-form-grid .field label { font-size: 12px; }
+.prep-form-grid .field textarea { min-height: 70px; }
+.prep-form-grid .prep-span { grid-column: 1 / -1; }
+.required { color: #FF4D4F; font-style: normal; }
+.prep-res { margin-top: 14px; }
+.prep-tip {
+  background: #fff; border-left: 3px solid #2B6CD6; border-radius: 6px; padding: 10px 12px;
+  color: #5A6577; font-size: 12px; line-height: 1.7; margin-bottom: 12px;
+}
+.prep-tags { background: #fff; border: 1px solid #E3E9F2; border-radius: 6px; padding: 12px; }
+.prep-tag-label { font-size: 13px; font-weight: 600; color: #1F2733; margin: 0 0 8px; }
+.prep-tag-label + .tsel-wrap { margin-bottom: 12px; }
+.prep-tag-label span { font-size: 11px; color: #97A1B2; font-weight: 400; }
+.scroll-x { overflow-x: auto; margin-top: 12px; }
+.match-table { width: 100%; min-width: 1020px; border-collapse: collapse; font-size: 12px; }
+.match-table th { background: #F7FAFD; color: #5A6577; font-weight: 600; text-align: center; padding: 10px 12px; border-bottom: 1px solid #E3E9F2; white-space: nowrap; }
+.match-table td { padding: 11px 12px; border-bottom: 1px solid #EEF2F8; color: #1F2733; text-align: center; vertical-align: top; }
+.match-table tr:last-child td { border-bottom: none; }
+.match-table .material, .match-table .suggestion { text-align: left; min-width: 180px; line-height: 1.6; }
+.match-table .suggestion { color: #5A6577; min-width: 250px; }
+.match-num { font-weight: 600; font-variant-numeric: tabular-nums; }
+.match-num.hi { color: #3C8E12; }
+.match-num.mid { color: #1D4FA8; }
+.match-num.lo { color: #C96A06; }
+.tiny { font-size: 10px; margin-top: 2px; }
+.small { font-size: 12px; }
+.cross-badge {
+  display: inline-flex; align-items: center; margin-right: 5px; font-size: 10px; font-weight: 600;
+  color: #1D4FA8; background: #EAF2FC; border: 1px solid #DCEBFB; border-radius: 4px; padding: 1px 4px;
+}
+.prep-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+@media (max-width: 900px) {
+  .prep-form-grid { grid-template-columns: 1fr; }
+  .section-title .prep-flow { display: none; }
+}
 
 /* ============ 表格 ============ */
 .table-wrap { overflow-x: auto; }
